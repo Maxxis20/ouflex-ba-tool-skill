@@ -1,0 +1,2078 @@
+{
+ "format": "ouflex-plan",
+ "version": 2,
+ "generated_by": "examples/dh-ex2/make_plan.py",
+ "program": "DH-ex2",
+ "title": "District heating substation, example connection 2: domestic hot water (TC1) and one heating circuit (TC2)",
+ "block_reference": "Ouman Ouflex BA Tool 2.130.14 (blocks.json)",
+ "target": "Ouman Ouflex A base unit",
+ "legend": {
+  "pins": "{wire: 'blk.pin'} | {const: v} | {setvalue: NAME} | {net: NAME} | {io: 'UI 3'}; feedback: true = one cycle old",
+  "out": "per output pin a list of {net}|{io}|{measure}",
+  "exec": "declaration order inside the application"
+ },
+ "stats": {
+  "applications": 4,
+  "blocks": 32,
+  "blocks_by_type": {
+   "LessThan": 6,
+   "GreaterThan": 6,
+   "Or": 6,
+   "SwitchBin": 4,
+   "OnDelay": 3,
+   "Pid": 2,
+   "SwitchAn": 1,
+   "SignalFilter": 1,
+   "And": 1,
+   "RS_FlipFlop": 1,
+   "Curve_3p": 1
+  },
+  "setvalues": 23,
+  "measures": 16,
+  "io": 8,
+  "nets": 6
+ },
+ "applications": [
+  {
+   "name": "OUTDOOR",
+   "order": 1,
+   "doc": "TE2B outdoor temperature: range check, fallback value, slow filter",
+   "blocks": [
+    {
+     "id": "tslo",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "TE2B outdoor sensor check",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - below the plausible range = sensor fault (open circuit)",
+     "pins": {
+      "A": {
+       "io": "UI 1"
+      },
+      "B": {
+       "const": -45.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tshi",
+     "exec": 2,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 187,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - above the plausible range = sensor fault (short circuit)",
+     "pins": {
+      "A": {
+       "io": "UI 1"
+      },
+      "B": {
+       "const": 50.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsbad",
+     "exec": 3,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 289,
+     "label": "",
+     "why": "vendor: Or 'If some input is 1, output is 1'; unused inputs untouched (excluded)",
+     "pins": {
+      "Input1": {
+       "wire": "tslo.Output"
+      },
+      "Input2": {
+       "wire": "tshi.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TE2B_FAULT"
+       },
+       {
+        "net": "TOUT_FAULT"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsub",
+     "exec": 4,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 60,
+     "y": 512,
+     "label": "Outdoor temperature for control: fallback value on a fault, slow filter",
+     "why": "vendor: SwitchAn 'If Select = 0, Output = Input0. If Select = 1, Output = Input1' - substitute value on fault",
+     "pins": {
+      "Select": {
+       "wire": "tsbad.Output"
+      },
+      "Input0": {
+       "io": "UI 1"
+      },
+      "Input1": {
+       "setvalue": "TOUT_FALLBACK"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tflt",
+     "exec": 5,
+     "lib": "OumanComponents",
+     "type": "SignalFilter",
+     "version": "1.1",
+     "file": "SignalFilter.ouepr",
+     "x": 60,
+     "y": 629,
+     "label": "",
+     "why": "vendor: SignalFilter 'first-order low-pass'; TimeConstant in seconds; Enable set 1 explicitly",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "tsub.Output"
+      },
+      "TimeConstant": {
+       "setvalue": "TOUT_FILT_T"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TE2B_F"
+       },
+       {
+        "net": "TOUT_F"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "TE2B outdoor sensor check",
+     "x": 60,
+     "y": 60
+    },
+    {
+     "text": "Outdoor temperature for control: fallback value on a fault, slow filter",
+     "x": 60,
+     "y": 485
+    }
+   ]
+  },
+  {
+   "name": "TC1_DHW",
+   "order": 2,
+   "doc": "TC1 domestic hot water: TV1 keeps TE1 at the set value (58 °C); P1 circulation; temperature alarm",
+   "blocks": [
+    {
+     "id": "tslo",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "TE1 sensor check",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - below the plausible range = sensor fault (open circuit)",
+     "pins": {
+      "A": {
+       "io": "UI 2"
+      },
+      "B": {
+       "const": -20.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tshi",
+     "exec": 2,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 187,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - above the plausible range = sensor fault (short circuit)",
+     "pins": {
+      "A": {
+       "io": "UI 2"
+      },
+      "B": {
+       "const": 120.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsbad",
+     "exec": 3,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 289,
+     "label": "",
+     "why": "vendor: Or 'If some input is 1, output is 1'; unused inputs untouched (excluded)",
+     "pins": {
+      "Input1": {
+       "wire": "tslo.Output"
+      },
+      "Input2": {
+       "wire": "tshi.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TE1_FAULT"
+       },
+       {
+        "net": "DHW_TS_FAULT"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "run",
+     "exec": 4,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 60,
+     "y": 512,
+     "label": "TC1 control: P1 runs while hot water is in use, TV1 keeps TE1 at the set value",
+     "why": "vendor: SwitchBin 'If Select = 0, Output = Input0' - binary set value brought to a block output",
+     "pins": {
+      "Select": {
+       "setvalue": "DHW_ENABLE"
+      },
+      "Input0": {
+       "const": 0
+      },
+      "Input1": {
+       "const": 1
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "P1_RUN"
+       },
+       {
+        "io": "R1"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pen",
+     "exec": 5,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 60,
+     "y": 629,
+     "label": "",
+     "why": "vendor: SwitchBin -> controller enable = in use AND NOT TE1 fault (Pid disabled = output 0 % = valve closed)",
+     "pins": {
+      "Select": {
+       "wire": "tsbad.Output"
+      },
+      "Input0": {
+       "wire": "run.Output"
+      },
+      "Input1": {
+       "const": 0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tc1",
+     "exec": 6,
+     "lib": "OumanComponents",
+     "type": "Pid",
+     "version": "5.1",
+     "file": "Pid_v5.ouepr",
+     "x": 60,
+     "y": 746,
+     "label": "",
+     "why": "vendor: Pid 5.1 'If Enable input is 0, PID regulator is inactive and output is 0%', 'Reverse ... 1 = Heating', P 'P-area' in °C (2..500), I 'I time in seconds' (5..300); Feedback unconnected, U32 stage pins untouched",
+     "pins": {
+      "Enable": {
+       "wire": "pen.Output"
+      },
+      "SetPoint": {
+       "setvalue": "DHW_SP"
+      },
+      "Measure": {
+       "io": "UI 2"
+      },
+      "DeadBand": {
+       "const": 0.5
+      },
+      "Reverse": {
+       "const": 1
+      },
+      "P": {
+       "setvalue": "DHW_PID_P"
+      },
+      "I": {
+       "setvalue": "DHW_PID_I"
+      },
+      "D": {
+       "const": 0.0
+      },
+      "CtrlSpace": {
+       "const": 1.0
+      },
+      "Min": {
+       "const": 0.0
+      },
+      "Max": {
+       "const": 100.0
+      },
+      "Balance": {
+       "const": 0.0
+      },
+      "BreakBand": {
+       "const": 0.0
+      },
+      "Hold": {
+       "const": 0
+      },
+      "StageUpDelay": {
+       "const": 0.0
+      },
+      "StageDownDelay": {
+       "const": 0.0
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TV1"
+       },
+       {
+        "io": "AO 1"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "ahi",
+     "exec": 7,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 1162,
+     "label": "Temperature alarm: above the high limit or below the low limit, delayed",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1'",
+     "pins": {
+      "A": {
+       "io": "UI 2"
+      },
+      "B": {
+       "setvalue": "DHW_HI_LIM"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "alo",
+     "exec": 8,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 1263,
+     "label": "",
+     "why": "vendor: LessThan 'if A < B, Output = 1'",
+     "pins": {
+      "A": {
+       "io": "UI 2"
+      },
+      "B": {
+       "setvalue": "DHW_LO_LIM"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "aor",
+     "exec": 9,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 1364,
+     "label": "",
+     "why": "vendor: Or",
+     "pins": {
+      "Input1": {
+       "wire": "ahi.Output"
+      },
+      "Input2": {
+       "wire": "alo.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "aand",
+     "exec": 10,
+     "lib": "OumanComponents",
+     "type": "And",
+     "version": "1.1",
+     "file": "And.ouepr",
+     "x": 60,
+     "y": 1562,
+     "label": "",
+     "why": "vendor: And 'If all inputs are 1, output is 1' - alarm only while the controller is active",
+     "pins": {
+      "Input1": {
+       "wire": "aor.Output"
+      },
+      "Input2": {
+       "wire": "pen.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "adly",
+     "exec": 11,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 1759,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s, 1->0 immediate; Enable=1 explicitly (Enable=0 passes the input through)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "aand.Output"
+      },
+      "DelayTime": {
+       "setvalue": "DHW_ALM_DLY"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "DHW_TEMP_ALM"
+       },
+       {
+        "net": "DHW_TEMP_ALM"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "TE1 sensor check",
+     "x": 60,
+     "y": 60
+    },
+    {
+     "text": "TC1 control: P1 runs while hot water is in use, TV1 keeps TE1 at the set value",
+     "x": 60,
+     "y": 485
+    },
+    {
+     "text": "Temperature alarm: above the high limit or below the low limit, delayed",
+     "x": 60,
+     "y": 1135
+    }
+   ]
+  },
+  {
+   "name": "TC2_HEAT",
+   "order": 3,
+   "doc": "TC2 heating: supply set value from the outdoor curve, TV2 keeps TE2A at it; P2; summer stop; temperature alarm",
+   "blocks": [
+    {
+     "id": "sstart",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "Summer stop: P2 stops when it is warm outdoors, heating resumes when it is cold",
+     "why": "vendor: LessThan 'if A < B, Output = 1'",
+     "pins": {
+      "A": {
+       "net": "TOUT_F"
+      },
+      "B": {
+       "setvalue": "SUM_START"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sstop",
+     "exec": 2,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 187,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1'",
+     "pins": {
+      "A": {
+       "net": "TOUT_F"
+      },
+      "B": {
+       "setvalue": "SUM_STOP"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sdly",
+     "exec": 3,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 289,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s; Enable=1 explicitly",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "sstop.Output"
+      },
+      "DelayTime": {
+       "setvalue": "SUM_DLY"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "slat",
+     "exec": 4,
+     "lib": "OumanComponents",
+     "type": "RS_FlipFlop",
+     "version": "2.1",
+     "file": "RS_FlipFlop_v2.ouepr",
+     "x": 60,
+     "y": 406,
+     "label": "",
+     "why": "vendor: RS_FlipFlop 'If both S and R are 1, Output is 0' (heating wins); both 0 'remain its state' = hysteresis",
+     "pins": {
+      "R": {
+       "wire": "sstart.Output"
+      },
+      "S": {
+       "wire": "sdly.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "SUMMER"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "run",
+     "exec": 5,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 60,
+     "y": 507,
+     "label": "",
+     "why": "vendor: SwitchBin 'If Select = 0, Output = Input0' -> run = in use AND NOT summer stop; RS OutputNeg 'is inverse of Output'",
+     "pins": {
+      "Select": {
+       "setvalue": "HEAT_ENABLE"
+      },
+      "Input0": {
+       "const": 0
+      },
+      "Input1": {
+       "wire": "slat.OutputNeg"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "P2_RUN"
+       },
+       {
+        "io": "R2"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tslo",
+     "exec": 6,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 650,
+     "label": "TE2A sensor check",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - below the plausible range = sensor fault (open circuit)",
+     "pins": {
+      "A": {
+       "io": "UI 3"
+      },
+      "B": {
+       "const": -20.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tshi",
+     "exec": 7,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 752,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - above the plausible range = sensor fault (short circuit)",
+     "pins": {
+      "A": {
+       "io": "UI 3"
+      },
+      "B": {
+       "const": 120.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsbad",
+     "exec": 8,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 853,
+     "label": "",
+     "why": "vendor: Or 'If some input is 1, output is 1'; unused inputs untouched (excluded)",
+     "pins": {
+      "Input1": {
+       "wire": "tslo.Output"
+      },
+      "Input2": {
+       "wire": "tshi.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TE2A_FAULT"
+       },
+       {
+        "net": "HEAT_TS_FAULT"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pen",
+     "exec": 9,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 60,
+     "y": 1050,
+     "label": "",
+     "why": "vendor: SwitchBin -> controller enable = run AND NOT TE2A fault (Pid disabled = output 0 % = valve closed)",
+     "pins": {
+      "Select": {
+       "wire": "tsbad.Output"
+      },
+      "Input0": {
+       "wire": "run.Output"
+      },
+      "Input1": {
+       "const": 0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "curve",
+     "exec": 10,
+     "lib": "OumanComponents",
+     "type": "Curve_3p",
+     "version": "1.13",
+     "file": "Curve_3p.ouepr",
+     "x": 60,
+     "y": 1194,
+     "label": "TC2 control: curve gives the set value, TV2 keeps TE2A at it",
+     "why": "vendor: Curve_3p 'curve is defined at 3 points: -20 °C, 0 °C and +20 °C', 'cut the top and bottom of curve with minimum and maximum limits'; the cut Output is the set value",
+     "pins": {
+      "Input": {
+       "net": "TOUT_F"
+      },
+      "Out_n20": {
+       "setvalue": "CRV_N20"
+      },
+      "Out_0": {
+       "setvalue": "CRV_0"
+      },
+      "Out_p20": {
+       "setvalue": "CRV_P20"
+      },
+      "Min": {
+       "setvalue": "TS_MIN"
+      },
+      "Max": {
+       "setvalue": "TS_MAX"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "HEAT_SP"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tc2",
+     "exec": 11,
+     "lib": "OumanComponents",
+     "type": "Pid",
+     "version": "5.1",
+     "file": "Pid_v5.ouepr",
+     "x": 60,
+     "y": 1359,
+     "label": "",
+     "why": "vendor: Pid 5.1 'If Enable input is 0, PID regulator is inactive and output is 0%', 'Reverse ... 1 = Heating', P 'P-area' in °C (2..500), I 'I time in seconds' (5..300); Feedback unconnected, U32 stage pins untouched",
+     "pins": {
+      "Enable": {
+       "wire": "pen.Output"
+      },
+      "SetPoint": {
+       "wire": "curve.Output"
+      },
+      "Measure": {
+       "io": "UI 3"
+      },
+      "DeadBand": {
+       "const": 0.5
+      },
+      "Reverse": {
+       "const": 1
+      },
+      "P": {
+       "setvalue": "HEAT_PID_P"
+      },
+      "I": {
+       "setvalue": "HEAT_PID_I"
+      },
+      "D": {
+       "const": 0.0
+      },
+      "CtrlSpace": {
+       "const": 1.0
+      },
+      "Min": {
+       "const": 0.0
+      },
+      "Max": {
+       "const": 100.0
+      },
+      "Balance": {
+       "const": 0.0
+      },
+      "BreakBand": {
+       "const": 0.0
+      },
+      "Hold": {
+       "const": 0
+      },
+      "StageUpDelay": {
+       "const": 0.0
+      },
+      "StageDownDelay": {
+       "const": 0.0
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TV2"
+       },
+       {
+        "io": "AO 2"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "ahi",
+     "exec": 12,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 1774,
+     "label": "Temperature alarm: above the high limit or below the low limit, delayed",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1'",
+     "pins": {
+      "A": {
+       "io": "UI 3"
+      },
+      "B": {
+       "setvalue": "HEAT_HI_LIM"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "alo",
+     "exec": 13,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 1876,
+     "label": "",
+     "why": "vendor: LessThan 'if A < B, Output = 1'",
+     "pins": {
+      "A": {
+       "io": "UI 3"
+      },
+      "B": {
+       "setvalue": "HEAT_LO_LIM"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "aor",
+     "exec": 14,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 1977,
+     "label": "",
+     "why": "vendor: Or",
+     "pins": {
+      "Input1": {
+       "wire": "ahi.Output"
+      },
+      "Input2": {
+       "wire": "alo.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "adly",
+     "exec": 15,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 2174,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s, 1->0 immediate; Enable=1 explicitly (Enable=0 passes the input through)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "aor.Output"
+      },
+      "DelayTime": {
+       "setvalue": "HEAT_ALM_DLY"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "HEAT_TEMP_ALM"
+       },
+       {
+        "net": "HEAT_TEMP_ALM"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "Summer stop: P2 stops when it is warm outdoors, heating resumes when it is cold",
+     "x": 60,
+     "y": 60
+    },
+    {
+     "text": "TE2A sensor check",
+     "x": 60,
+     "y": 624
+    },
+    {
+     "text": "TC2 control: curve gives the set value, TV2 keeps TE2A at it",
+     "x": 60,
+     "y": 1167
+    },
+    {
+     "text": "Temperature alarm: above the high limit or below the low limit, delayed",
+     "x": 60,
+     "y": 1748
+    }
+   ]
+  },
+  {
+   "name": "ALARM",
+   "order": 4,
+   "doc": "HS common alarm relay: OR of all alarm status bits (runs last)",
+   "blocks": [
+    {
+     "id": "alm",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "Common alarm (HS): any sensor fault or temperature alarm",
+     "why": "vendor: Or 'If some input is 1, output is 1'; Input6..8 untouched (excluded)",
+     "pins": {
+      "Input1": {
+       "net": "TOUT_FAULT"
+      },
+      "Input2": {
+       "net": "DHW_TS_FAULT"
+      },
+      "Input3": {
+       "net": "DHW_TEMP_ALM"
+      },
+      "Input4": {
+       "net": "HEAT_TS_FAULT"
+      },
+      "Input5": {
+       "net": "HEAT_TEMP_ALM"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "ALARM_SUM"
+       },
+       {
+        "io": "R3"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "Common alarm (HS): any sensor fault or temperature alarm",
+     "x": 60,
+     "y": 60
+    }
+   ]
+  }
+ ],
+ "nets": [
+  {
+   "name": "TOUT_FAULT",
+   "type": "Enum",
+   "writer": "OUTDOOR/tsbad.Output",
+   "readers": [
+    "ALARM/alm.Input1"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "TOUT_F",
+   "type": "Float",
+   "writer": "OUTDOOR/tflt.Output",
+   "readers": [
+    "TC2_HEAT/sstart.A",
+    "TC2_HEAT/sstop.A",
+    "TC2_HEAT/curve.Input"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "DHW_TS_FAULT",
+   "type": "Enum",
+   "writer": "TC1_DHW/tsbad.Output",
+   "readers": [
+    "ALARM/alm.Input2"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "DHW_TEMP_ALM",
+   "type": "Enum",
+   "writer": "TC1_DHW/adly.Output",
+   "readers": [
+    "ALARM/alm.Input3"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "HEAT_TS_FAULT",
+   "type": "Enum",
+   "writer": "TC2_HEAT/tsbad.Output",
+   "readers": [
+    "ALARM/alm.Input4"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "HEAT_TEMP_ALM",
+   "type": "Enum",
+   "writer": "TC2_HEAT/adly.Output",
+   "readers": [
+    "ALARM/alm.Input5"
+   ],
+   "feedback": false
+  }
+ ],
+ "setvalues": [
+  {
+   "name": "TOUT_FALLBACK",
+   "display": "Outdoor fallback temperature",
+   "display_fi": "Outdoor fallback temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 0.0,
+   "min": -30.0,
+   "max": 20.0,
+   "decimals": 1,
+   "pins": [
+    "OUTDOOR/tsub.Input1"
+   ],
+   "fanout": null,
+   "why_settable": "used while TE2B is faulty; site dependent",
+   "modbus": {
+    "table": "4x",
+    "offset": 0,
+    "writable": true
+   }
+  },
+  {
+   "name": "TOUT_FILT_T",
+   "display": "Outdoor filter time constant",
+   "display_fi": "Outdoor filter time constant",
+   "unit": "s",
+   "type": "Float",
+   "default": 900.0,
+   "min": 10.0,
+   "max": 21600.0,
+   "decimals": 0,
+   "pins": [
+    "OUTDOOR/tflt.TimeConstant"
+   ],
+   "fanout": null,
+   "why_settable": "building inertia; tuned at commissioning",
+   "modbus": {
+    "table": "4x",
+    "offset": 1,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_ENABLE",
+   "display": "Domestic hot water in use",
+   "display_fi": "Domestic hot water in use",
+   "unit": "",
+   "type": "Enum",
+   "default": 1,
+   "min": 0,
+   "max": 1,
+   "decimals": null,
+   "pins": [
+    "TC1_DHW/run.Select"
+   ],
+   "fanout": null,
+   "why_settable": "operator switches DHW off for service",
+   "modbus": {
+    "table": "4x",
+    "offset": 2,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_SP",
+   "display": "Domestic hot water set value",
+   "display_fi": "Domestic hot water set value",
+   "unit": "°C",
+   "type": "Float",
+   "default": 58.0,
+   "min": 50.0,
+   "max": 65.0,
+   "decimals": 1,
+   "pins": [
+    "TC1_DHW/tc1.SetPoint"
+   ],
+   "fanout": null,
+   "why_settable": "K2 example: 58 °C",
+   "modbus": {
+    "table": "4x",
+    "offset": 3,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_PID_P",
+   "display": "TC1 proportional band",
+   "display_fi": "TC1 proportional band",
+   "unit": "°C",
+   "type": "Float",
+   "default": 60.0,
+   "min": 2.0,
+   "max": 500.0,
+   "decimals": 1,
+   "pins": [
+    "TC1_DHW/tc1.P"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning",
+   "modbus": {
+    "table": "4x",
+    "offset": 4,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_PID_I",
+   "display": "TC1 integral time",
+   "display_fi": "TC1 integral time",
+   "unit": "s",
+   "type": "Float",
+   "default": 15.0,
+   "min": 5.0,
+   "max": 300.0,
+   "decimals": 0,
+   "pins": [
+    "TC1_DHW/tc1.I"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning; must not be 0 (vendor)",
+   "modbus": {
+    "table": "4x",
+    "offset": 5,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_HI_LIM",
+   "display": "Hot water high alarm limit",
+   "display_fi": "Hot water high alarm limit",
+   "unit": "°C",
+   "type": "Float",
+   "default": 65.0,
+   "min": 55.0,
+   "max": 90.0,
+   "decimals": 1,
+   "pins": [
+    "TC1_DHW/ahi.B"
+   ],
+   "fanout": null,
+   "why_settable": "scalding limit; operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 6,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_LO_LIM",
+   "display": "Hot water low alarm limit",
+   "display_fi": "Hot water low alarm limit",
+   "unit": "°C",
+   "type": "Float",
+   "default": 50.0,
+   "min": 30.0,
+   "max": 58.0,
+   "decimals": 1,
+   "pins": [
+    "TC1_DHW/alo.B"
+   ],
+   "fanout": null,
+   "why_settable": "legionella limit; operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 7,
+    "writable": true
+   }
+  },
+  {
+   "name": "DHW_ALM_DLY",
+   "display": "Hot water alarm delay",
+   "display_fi": "Hot water alarm delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 300.0,
+   "min": 10.0,
+   "max": 3600.0,
+   "decimals": 0,
+   "pins": [
+    "TC1_DHW/adly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 8,
+    "writable": true
+   }
+  },
+  {
+   "name": "SUM_START",
+   "display": "Heating resumes below outdoor",
+   "display_fi": "Heating resumes below outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 16.0,
+   "min": 0.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/sstart.B"
+   ],
+   "fanout": null,
+   "why_settable": "seasonal; operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 9,
+    "writable": true
+   }
+  },
+  {
+   "name": "SUM_STOP",
+   "display": "Summer stop above outdoor",
+   "display_fi": "Summer stop above outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 18.0,
+   "min": 5.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/sstop.B"
+   ],
+   "fanout": null,
+   "why_settable": "seasonal; operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 10,
+    "writable": true
+   }
+  },
+  {
+   "name": "SUM_DLY",
+   "display": "Summer stop delay",
+   "display_fi": "Summer stop delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 3600.0,
+   "min": 0.0,
+   "max": 86400.0,
+   "decimals": 0,
+   "pins": [
+    "TC2_HEAT/sdly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 11,
+    "writable": true
+   }
+  },
+  {
+   "name": "HEAT_ENABLE",
+   "display": "Heating in use",
+   "display_fi": "Heating in use",
+   "unit": "",
+   "type": "Enum",
+   "default": 1,
+   "min": 0,
+   "max": 1,
+   "decimals": null,
+   "pins": [
+    "TC2_HEAT/run.Select"
+   ],
+   "fanout": null,
+   "why_settable": "operator switches heating off for service",
+   "modbus": {
+    "table": "4x",
+    "offset": 12,
+    "writable": true
+   }
+  },
+  {
+   "name": "CRV_N20",
+   "display": "Curve: supply at -20 °C outdoor",
+   "display_fi": "Curve: supply at -20 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 58.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/curve.Out_n20"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 13,
+    "writable": true
+   }
+  },
+  {
+   "name": "CRV_0",
+   "display": "Curve: supply at 0 °C outdoor",
+   "display_fi": "Curve: supply at 0 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 41.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/curve.Out_0"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 14,
+    "writable": true
+   }
+  },
+  {
+   "name": "CRV_P20",
+   "display": "Curve: supply at +20 °C outdoor",
+   "display_fi": "Curve: supply at +20 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 20.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/curve.Out_p20"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 15,
+    "writable": true
+   }
+  },
+  {
+   "name": "TS_MIN",
+   "display": "Minimum supply temperature",
+   "display_fi": "Minimum supply temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 18.0,
+   "min": 10.0,
+   "max": 50.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/curve.Min"
+   ],
+   "fanout": null,
+   "why_settable": "commissioning / operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 16,
+    "writable": true
+   }
+  },
+  {
+   "name": "TS_MAX",
+   "display": "Maximum supply temperature",
+   "display_fi": "Maximum supply temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 70.0,
+   "min": 20.0,
+   "max": 90.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/curve.Max"
+   ],
+   "fanout": null,
+   "why_settable": "commissioning; protects the radiators",
+   "modbus": {
+    "table": "4x",
+    "offset": 17,
+    "writable": true
+   }
+  },
+  {
+   "name": "HEAT_PID_P",
+   "display": "TC2 proportional band",
+   "display_fi": "TC2 proportional band",
+   "unit": "°C",
+   "type": "Float",
+   "default": 40.0,
+   "min": 2.0,
+   "max": 500.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/tc2.P"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning",
+   "modbus": {
+    "table": "4x",
+    "offset": 18,
+    "writable": true
+   }
+  },
+  {
+   "name": "HEAT_PID_I",
+   "display": "TC2 integral time",
+   "display_fi": "TC2 integral time",
+   "unit": "s",
+   "type": "Float",
+   "default": 60.0,
+   "min": 5.0,
+   "max": 300.0,
+   "decimals": 0,
+   "pins": [
+    "TC2_HEAT/tc2.I"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning; must not be 0 (vendor)",
+   "modbus": {
+    "table": "4x",
+    "offset": 19,
+    "writable": true
+   }
+  },
+  {
+   "name": "HEAT_HI_LIM",
+   "display": "Heating supply high alarm limit",
+   "display_fi": "Heating supply high alarm limit",
+   "unit": "°C",
+   "type": "Float",
+   "default": 80.0,
+   "min": 40.0,
+   "max": 110.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/ahi.B"
+   ],
+   "fanout": null,
+   "why_settable": "protects the heating network; operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 20,
+    "writable": true
+   }
+  },
+  {
+   "name": "HEAT_LO_LIM",
+   "display": "Heating supply low alarm limit",
+   "display_fi": "Heating supply low alarm limit",
+   "unit": "°C",
+   "type": "Float",
+   "default": 8.0,
+   "min": 2.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "TC2_HEAT/alo.B"
+   ],
+   "fanout": null,
+   "why_settable": "freezing risk; operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 21,
+    "writable": true
+   }
+  },
+  {
+   "name": "HEAT_ALM_DLY",
+   "display": "Heating supply alarm delay",
+   "display_fi": "Heating supply alarm delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 600.0,
+   "min": 10.0,
+   "max": 3600.0,
+   "decimals": 0,
+   "pins": [
+    "TC2_HEAT/adly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 22,
+    "writable": true
+   }
+  }
+ ],
+ "measures": [
+  {
+   "name": "TE2B_FAULT",
+   "display": "TE2B outdoor sensor fault",
+   "display_fi": "TE2B outdoor sensor fault",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "OUTDOOR/tsbad.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 0,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TE2B_F",
+   "display": "TE2B outdoor temperature, filtered",
+   "display_fi": "TE2B outdoor temperature, filtered",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "OUTDOOR/tflt.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 0,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TE1_FAULT",
+   "display": "TE1 hot water sensor fault",
+   "display_fi": "TE1 hot water sensor fault",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC1_DHW/tsbad.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 1,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "P1_RUN",
+   "display": "P1 hot water circulation pump command",
+   "display_fi": "P1 hot water circulation pump command",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC1_DHW/run.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 2,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TV1",
+   "display": "TV1 hot water valve position",
+   "display_fi": "TV1 hot water valve position",
+   "unit": "%",
+   "decimals": 0,
+   "type": "Float",
+   "source": "TC1_DHW/tc1.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 1,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "DHW_TEMP_ALM",
+   "display": "Hot water temperature alarm",
+   "display_fi": "Hot water temperature alarm",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC1_DHW/adly.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 3,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "SUMMER",
+   "display": "Summer stop active",
+   "display_fi": "Summer stop active",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC2_HEAT/slat.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 4,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "P2_RUN",
+   "display": "P2 heating pump command",
+   "display_fi": "P2 heating pump command",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC2_HEAT/run.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 5,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TE2A_FAULT",
+   "display": "TE2A supply sensor fault",
+   "display_fi": "TE2A supply sensor fault",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC2_HEAT/tsbad.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 6,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "HEAT_SP",
+   "display": "Heating supply set value",
+   "display_fi": "Heating supply set value",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "TC2_HEAT/curve.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 2,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TV2",
+   "display": "TV2 heating valve position",
+   "display_fi": "TV2 heating valve position",
+   "unit": "%",
+   "decimals": 0,
+   "type": "Float",
+   "source": "TC2_HEAT/tc2.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 3,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "HEAT_TEMP_ALM",
+   "display": "Heating supply temperature alarm",
+   "display_fi": "Heating supply temperature alarm",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "TC2_HEAT/adly.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 7,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "ALARM_SUM",
+   "display": "Common alarm",
+   "display_fi": "Common alarm",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "ALARM/alm.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 8,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TE2B",
+   "display": "TE2B outdoor temperature, raw",
+   "display_fi": "TE2B outdoor temperature, raw",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 1",
+   "modbus": {
+    "table": "3x",
+    "offset": 4,
+    "writable": false
+   },
+   "why": "physical point"
+  },
+  {
+   "name": "TE1",
+   "display": "TE1 domestic hot water temperature",
+   "display_fi": "TE1 domestic hot water temperature",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 2",
+   "modbus": {
+    "table": "3x",
+    "offset": 5,
+    "writable": false
+   },
+   "why": "physical point"
+  },
+  {
+   "name": "TE2A",
+   "display": "TE2A heating supply temperature",
+   "display_fi": "TE2A heating supply temperature",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 3",
+   "modbus": {
+    "table": "3x",
+    "offset": 6,
+    "writable": false
+   },
+   "why": "physical point"
+  }
+ ],
+ "io": [
+  {
+   "point": "UI 1",
+   "pin": "TE2B_IN",
+   "description": "TE2B outdoor temperature",
+   "description_fi": "TE2B outdoor temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [
+    "OUTDOOR/tslo.A",
+    "OUTDOOR/tshi.A",
+    "OUTDOOR/tsub.Input0"
+   ],
+   "driven_by": []
+  },
+  {
+   "point": "UI 2",
+   "pin": "TE1_IN",
+   "description": "TE1 domestic hot water temperature",
+   "description_fi": "TE1 domestic hot water temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [
+    "TC1_DHW/tslo.A",
+    "TC1_DHW/tshi.A",
+    "TC1_DHW/tc1.Measure",
+    "TC1_DHW/ahi.A",
+    "TC1_DHW/alo.A"
+   ],
+   "driven_by": []
+  },
+  {
+   "point": "UI 3",
+   "pin": "TE2A_IN",
+   "description": "TE2A heating network supply temperature",
+   "description_fi": "TE2A heating network supply temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [
+    "TC2_HEAT/tslo.A",
+    "TC2_HEAT/tshi.A",
+    "TC2_HEAT/tc2.Measure",
+    "TC2_HEAT/ahi.A",
+    "TC2_HEAT/alo.A"
+   ],
+   "driven_by": []
+  },
+  {
+   "point": "AO 1",
+   "pin": "TV1_OUT",
+   "description": "TV1 domestic hot water control valve 0..100 %",
+   "description_fi": "TV1 domestic hot water control valve 0..100 %",
+   "dir": "out",
+   "kind": "AO 0-10V",
+   "used_by": [],
+   "driven_by": [
+    "TC1_DHW/tc1.Output"
+   ]
+  },
+  {
+   "point": "AO 2",
+   "pin": "TV2_OUT",
+   "description": "TV2 heating control valve 0..100 %",
+   "description_fi": "TV2 heating control valve 0..100 %",
+   "dir": "out",
+   "kind": "AO 0-10V",
+   "used_by": [],
+   "driven_by": [
+    "TC2_HEAT/tc2.Output"
+   ]
+  },
+  {
+   "point": "R1",
+   "pin": "P1_OUT",
+   "description": "P1 domestic hot water circulation pump",
+   "description_fi": "P1 domestic hot water circulation pump",
+   "dir": "out",
+   "kind": "relay",
+   "used_by": [],
+   "driven_by": [
+    "TC1_DHW/run.Output"
+   ]
+  },
+  {
+   "point": "R2",
+   "pin": "P2_OUT",
+   "description": "P2 heating network pump",
+   "description_fi": "P2 heating network pump",
+   "dir": "out",
+   "kind": "relay",
+   "used_by": [],
+   "driven_by": [
+    "TC2_HEAT/run.Output"
+   ]
+  },
+  {
+   "point": "R3",
+   "pin": "ALARM_OUT",
+   "description": "HS common alarm (energised = alarm)",
+   "description_fi": "HS common alarm (energised = alarm)",
+   "dir": "out",
+   "kind": "relay",
+   "used_by": [],
+   "driven_by": [
+    "ALARM/alm.Output"
+   ]
+  }
+ ],
+ "alarms": [
+  {
+   "name": "TOUT_FAULT",
+   "text": "TE2B outdoor sensor fault",
+   "source": "OUTDOOR/tsbad.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "DHW_TS_FAULT",
+   "text": "TE1 hot water sensor fault",
+   "source": "TC1_DHW/tsbad.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "DHW_TEMP_ALM",
+   "text": "Hot water temperature high / low",
+   "source": "TC1_DHW/adly.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "HEAT_TS_FAULT",
+   "text": "TE2A supply sensor fault",
+   "source": "TC2_HEAT/tsbad.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "HEAT_TEMP_ALM",
+   "text": "Heating supply temperature high / low",
+   "source": "TC2_HEAT/adly.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  }
+ ],
+ "left_out": [
+  {
+   "item": "Pump exercise in summer stop",
+   "reason": "kept simple; add an OnOffPulse block if wanted"
+  },
+  {
+   "item": "Valve fault position, set value consistency checks, setpoint offset, sensor fault delay",
+   "reason": "kept simple"
+  },
+  {
+   "item": "Supply deviation alarm",
+   "reason": "replaced by high / low limit alarms on TE1 and TE2A (same structure in both circuits)"
+  },
+  {
+   "item": "Time programs / night setback, room compensation",
+   "reason": "not in the K2 example; time programs unsolved in the build helpers"
+  },
+  {
+   "item": "Alarm objects, acknowledgement, latching",
+   "reason": "alarm objects are unsolved in the tool; status bits and one common relay"
+  },
+  {
+   "item": "Pressure switch PS / expansion alarm, PI/TI gauges, energy meter",
+   "reason": "local instruments in the drawing, not connected to the control centre"
+  },
+  {
+   "item": "DHW anticipation (flow / primary feed-forward)",
+   "reason": "not in the K2 example; plain PI on TE1"
+  }
+ ],
+ "notes": [
+  "Modbus: set values 1000+n, analog measurements 1100+n, binary status 1150+n; all Holding registers; the exported document shows each number +1.",
+  "Execution order: OUTDOOR, TC1_DHW, TC2_HEAT, ALARM; every net is read by a later application (same cycle, no feedback).",
+  "Heating set value = Curve_3p Output (curve cut with TS_MIN / TS_MAX inside the block).",
+  "AO scaling assumed 0..100 % = 0..10 V."
+ ]
+}

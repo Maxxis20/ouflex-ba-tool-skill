@@ -1,0 +1,24 @@
+{
+ "_source": "ouflayout.py --learn: pins left visible by the tool on blocks where the plan does not use them (from */out/*.dump.txt)",
+ "sticky": {
+  "CountUp": [
+   "Enable",
+   "FallingEdge",
+   "InitialValue",
+   "RisingEdge"
+  ],
+  "OnOffPulse": [
+   "StartState"
+  ],
+  "Pulse": [
+   "Mode"
+  ],
+  "RunTimeCounter": [
+   "Enable"
+  ],
+  "StateSync": [
+   "Default",
+   "Enable"
+  ]
+ }
+}

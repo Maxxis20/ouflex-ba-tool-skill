@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+# made by setup from Ouman's block library on your machine: never commit
+reference/blocks.json
+reference/primitive-pins.txt
+reference/primitive-docs.txt
+# build outputs
+examples/*/build/

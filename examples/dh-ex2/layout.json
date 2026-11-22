@@ -1,0 +1,225 @@
+{
+ "OUTDOOR": {
+  "columns": [
+   [
+    "@TE2B_IN"
+   ],
+   [
+    "tslo",
+    "tshi"
+   ],
+   [
+    "tsbad"
+   ],
+   [
+    "@TOUT_FAULT",
+    "tsub"
+   ],
+   [
+    "tflt"
+   ],
+   [
+    "@TOUT_F"
+   ]
+  ],
+  "to": {
+   "@TE2B_IN": "tsub.Input0"
+  },
+  "dy": {
+   "tsub": 96
+  },
+  "labels": [
+   {
+    "text": "TE2B outdoor sensor check",
+    "above": "tslo"
+   },
+   {
+    "text": "Fallback on fault, slow filter",
+    "above": "tsub"
+   }
+  ]
+ },
+ "TC1_DHW": {
+  "columns": [
+   [
+    "@TE1_IN"
+   ],
+   [
+    "tslo",
+    "tshi",
+    "ahi",
+    "alo"
+   ],
+   [
+    "tsbad",
+    "run",
+    "aor"
+   ],
+   [
+    "@DHW_TS_FAULT",
+    "@P1_OUT",
+    "pen"
+   ],
+   [
+    "tc1",
+    "aand"
+   ],
+   [
+    "@TV1_OUT",
+    "adly"
+   ],
+   [
+    "@DHW_TEMP_ALM_N"
+   ]
+  ],
+  "to": {
+   "@TE1_IN": "tc1.Measure"
+  },
+  "align": {
+   "pen": "Input0"
+  },
+  "dy": {
+   "run": 30,
+   "tc1": 64,
+   "ahi": 367
+  },
+  "labels": [
+   {
+    "text": "TE1 sensor check",
+    "above": "tslo"
+   },
+   {
+    "text": "P1 pump",
+    "above": "run"
+   },
+   {
+    "text": "TC1: TV1 keeps TE1 at the set value",
+    "above": "tc1"
+   },
+   {
+    "text": "TE1 high / low alarm",
+    "above": "ahi"
+   }
+  ]
+ },
+ "TC2_HEAT": {
+  "columns": [
+   [
+    "@TOUT_F"
+   ],
+   [
+    "sstart",
+    "sstop"
+   ],
+   [
+    "sdly",
+    "@TE2A_IN"
+   ],
+   [
+    "slat",
+    "tslo",
+    "tshi",
+    "ahi",
+    "alo"
+   ],
+   [
+    "run",
+    "tsbad",
+    "aor"
+   ],
+   [
+    "@P2_OUT",
+    "@HEAT_TS_FAULT",
+    "pen",
+    "curve",
+    "adly"
+   ],
+   [
+    "tc2",
+    "@HEAT_TEMP_ALM_N"
+   ],
+   [
+    "@TV2_OUT"
+   ]
+  ],
+  "to": {
+   "@TOUT_F": "curve.Input",
+   "@TE2A_IN": "tc2.Measure"
+  },
+  "align": {
+   "slat": "R",
+   "pen": "Input0"
+  },
+  "dy": {
+   "tc2": 64,
+   "curve": 80,
+   "ahi": 200,
+   "tslo": 40
+  },
+  "labels": [
+   {
+    "text": "Summer stop, P2 pump",
+    "above": "sstart"
+   },
+   {
+    "text": "TE2A sensor check",
+    "above": "tslo"
+   },
+   {
+    "text": "Heating curve",
+    "above": "curve"
+   },
+   {
+    "text": "TC2: TV2 keeps TE2A at the set value",
+    "above": "tc2"
+   },
+   {
+    "text": "TE2A high / low alarm",
+    "above": "ahi"
+   }
+  ]
+ },
+ "ALARM": {
+  "columns": [
+   [
+    "@TOUT_FAULT",
+    "@DHW_TS_FAULT",
+    "@DHW_TEMP_ALM_N",
+    "@HEAT_TS_FAULT",
+    "@HEAT_TEMP_ALM_N"
+   ],
+   [
+    "alm"
+   ],
+   [
+    "@ALARM_OUT"
+   ]
+  ],
+  "labels": [
+   {
+    "text": "Common alarm (HS)",
+    "above": "alm"
+   }
+  ]
+ },
+ "_device": {
+  "apps": {
+   "TC1_DHW": [
+    450,
+    3
+   ],
+   "TC2_HEAT": [
+    450,
+    130
+   ],
+   "OUTDOOR": [
+    230,
+    250
+   ],
+   "ALARM": [
+    680,
+    540
+   ]
+  }
+ }
+}

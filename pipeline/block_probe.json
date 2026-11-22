@@ -1,0 +1,331 @@
+{
+ "_source": "probe 2026-11-10: one of each block placed by script in C:\\agentwork\\apps\\probe2.ouear (hosted ApplicationBuilder), vendor built-in set values/measures dropped as the build does (Drop-Builtins), then CheckAll(); 'required' = the pins CheckAll lists under FOLLOWING PINS ARE NOT CONNECTED. A pin that arrives with a vendor set value is empty after the drop and therefore required unless the plan sources it.",
+ "required": {
+  "Pid": [
+   "SetPoint",
+   "Measure",
+   "P",
+   "I"
+  ],
+  "Linearization": [
+   "Input"
+  ],
+  "SignalSplitter": [
+   "Input"
+  ],
+  "Thermostat": [
+   "Input",
+   "Setpoint"
+  ],
+  "MotorDriverV": [
+   "Input",
+   "OpenTime",
+   "CloseTime"
+  ],
+  "Max": [
+   "Input1"
+  ],
+  "Min": [
+   "Input1"
+  ],
+  "Multiply": [
+   "A"
+  ],
+  "OnOffDelay": [
+   "Input"
+  ],
+  "OffDelay": [
+   "Input"
+  ],
+  "RampUpDown": [
+   "Input"
+  ],
+  "Deadband": [
+   "Input"
+  ],
+  "P_control": [
+   "SetPoint",
+   "Measure",
+   "P"
+  ],
+  "Compare": [
+   "A",
+   "B"
+  ],
+  "Equal": [
+   "A",
+   "B"
+  ],
+  "AnalogAlarm": [
+   "Input"
+  ],
+  "BinaryAlarm": [
+   "Input"
+  ],
+  "DeviationAlarm": [
+   "SetPoint",
+   "Measurement"
+  ],
+  "RisingEdgeDetect": [
+   "Input"
+  ],
+  "Override": [
+   "Input",
+   "OverrideEnable",
+   "OverrideValue"
+  ],
+  "Limit": [
+   "Input"
+  ],
+  "SwitchAn": [
+   "Select",
+   "Input0",
+   "Input1"
+  ],
+  "Integrator": [
+   "Input"
+  ],
+  "Divide": [
+   "A"
+  ],
+  "Absolute": [
+   "Input"
+  ],
+  "RampAnalogDelay": [
+   "Input"
+  ],
+  "MotorDriver3p": [
+   "Input",
+   "OpenTime",
+   "CloseTime",
+   "DeadBand"
+  ],
+  "Curve_3p": [],
+  "Curve_5p": [],
+  "StartDelay": [],
+  "PrioritySelect": [],
+  "Average": [],
+  "SequencingModule": [],
+  "OnOffPulse": [],
+  "SensorWatchAn": []
+ },
+ "builtin_setvalues": {
+  "Pid": [
+   "P",
+   "I",
+   "D"
+  ],
+  "Curve_3p": [
+   "Out_n20",
+   "Out_0",
+   "Out_p20",
+   "Min",
+   "Max"
+  ],
+  "Curve_5p": [
+   "Out1",
+   "In2",
+   "Out2",
+   "In3",
+   "Out3",
+   "In4",
+   "Out4",
+   "Out5",
+   "Min",
+   "Max"
+  ],
+  "Thermostat": [
+   "Setpoint"
+  ],
+  "MotorDriverV": [
+   "OpenTime",
+   "CloseTime"
+  ],
+  "P_control": [
+   "SetPoint",
+   "P"
+  ],
+  "MotorDriver3p": [
+   "OpenTime",
+   "CloseTime"
+  ]
+ },
+ "builtin_measures": {
+  "Pid": [
+   "Output",
+   "Diff"
+  ],
+  "Curve_3p": [
+   "Output",
+   "CurveOut",
+   "MinLimitEffect",
+   "MaxLimitEffect"
+  ],
+  "Curve_5p": [
+   "Output",
+   "CurveOut",
+   "MinLimitEffect",
+   "MaxLimitEffect"
+  ],
+  "Thermostat": [
+   "Output"
+  ],
+  "Deadband": [
+   "Output"
+  ],
+  "P_control": [
+   "Output",
+   "Diff"
+  ],
+  "Override": [
+   "Output"
+  ]
+ },
+ "default_consts": {
+  "Pid": {
+   "Enable": "1",
+   "DeadBand": "1",
+   "Reverse": "1",
+   "P": "200",
+   "I": "50",
+   "D": "0",
+   "CtrlSpace": "1",
+   "Min": "0",
+   "Max": "100"
+  },
+  "Curve_3p": {
+   "Out_n20": "34",
+   "Out_0": "28",
+   "Out_p20": "22",
+   "Min": "15",
+   "Max": "70"
+  },
+  "Curve_5p": {
+   "Out1": "34",
+   "In2": "-10",
+   "Out2": "31",
+   "In3": "0",
+   "Out3": "28",
+   "In4": "10",
+   "Out4": "25",
+   "Out5": "22",
+   "Min": "15",
+   "Max": "70"
+  },
+  "SignalSplitter": {
+   "Enable": "1",
+   "Min": "0",
+   "Max": "100"
+  },
+  "Thermostat": {
+   "Enable": "1",
+   "Hysteresis": "1",
+   "Setpoint": "21",
+   "Reverse": "0",
+   "Mode": "0"
+  },
+  "MotorDriverV": {
+   "OpenTime": "60",
+   "CloseTime": "60",
+   "CalibEn": "1"
+  },
+  "OnOffDelay": {
+   "Enable": "1",
+   "OnDelay": "1",
+   "OffDelay": "1"
+  },
+  "OffDelay": {
+   "Enable": "1",
+   "DelayTime": "1"
+  },
+  "StartDelay": {
+   "DelayTime": "10"
+  },
+  "RampUpDown": {
+   "Enable": "1",
+   "Min": "0",
+   "Max": "100",
+   "RampTimeUp": "60",
+   "RampTimeDown": "60"
+  },
+  "Deadband": {
+   "Enable": "1",
+   "DeadBand": "1"
+  },
+  "P_control": {
+   "Enable": "1",
+   "SetPoint": "20",
+   "Reverse": "1",
+   "P": "200",
+   "Min": "0",
+   "Max": "100",
+   "DeadBand": "1"
+  },
+  "PrioritySelect": {
+   "Enable": "1",
+   "Default": "0"
+  },
+  "SequencingModule": {
+   "Enable": "1",
+   "StageCount": "8"
+  },
+  "OnOffPulse": {
+   "OnTime": "5",
+   "OffTime": "5",
+   "StartState": "1"
+  },
+  "AnalogAlarm": {
+   "Enable": "1",
+   "Priority": "1",
+   "Group": "1",
+   "EntryDelay": "5",
+   "ExitDelay": "5",
+   "AckOnDisable": "0",
+   "Hysteresis": "1"
+  },
+  "BinaryAlarm": {
+   "Enable": "1",
+   "Priority": "1",
+   "Group": "1",
+   "EntryDelay": "5",
+   "ExitDelay": "5",
+   "AckOnDisable": "0"
+  },
+  "DeviationAlarm": {
+   "Enable": "1",
+   "Priority": "1",
+   "Group": "1",
+   "EntryDelay": "5",
+   "ExitDelay": "5",
+   "AckOnDisable": "0",
+   "MaxDeviation": "5",
+   "Hysteresis": "1"
+  },
+  "RisingEdgeDetect": {
+   "Enable": "1"
+  },
+  "Limit": {
+   "Min": "0",
+   "Max": "100"
+  },
+  "Integrator": {
+   "Enable": "1",
+   "CtrlSpace": "1",
+   "Gain": "1"
+  },
+  "RampAnalogDelay": {
+   "Enable": "1",
+   "Min": "0",
+   "Max": "100",
+   "DrvTimeUp": "100",
+   "DrvTimeDown": "100",
+   "RevDelayUp": "0",
+   "RevDelayDown": "0"
+  },
+  "MotorDriver3p": {
+   "OpenTime": "60",
+   "CloseTime": "60",
+   "CalibEn": "1"
+  }
+ }
+}

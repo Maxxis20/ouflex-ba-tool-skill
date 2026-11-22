@@ -1,0 +1,42 @@
+{
+ "name": "DH-ex2",
+ "plan": "plan.json",
+ "out": "build",
+ "paths": {
+  "apps": "C:\\agentwork\\apps\\dh-ex2",
+  "project": "C:\\agentwork\\proj\\DH-ex2",
+  "base": "new",
+  "modbus_doc": "C:\\agentwork\\proj\\DH-ex2_modbus"
+ },
+ "modules": [],
+ "polarity": "Normal",
+ "modbus": {
+  "base": 1000,
+  "areas": {
+   "4x": 0,
+   "3x": 100,
+   "1x": 150
+  },
+  "formats": {
+   "default": "S16"
+  },
+  "local_off_bus": true
+ },
+ "required_fill": {},
+ "io_kinds": {
+  "AO 0-10V": {
+   "phys": "Analog",
+   "devtype": "TX_OUT",
+   "min": 0,
+   "max": 100,
+   "unit": "%",
+   "decimals": 1,
+   "vt": "Float"
+  }
+ },
+ "_notes": {
+  "base": "new = the build makes a new project by code, named like the last folder of paths.project, with one Ouflex A (device_type picks another type). Or the folder of an empty project to copy, e.g. C:\\agentwork\\base\\OuflexA_empty from setup",
+  "modbus": "one rule: Holding registers only (the only kind the slave offers); set values 1000+n, analog measurements 1100+n, status bits 1150+n, n = declaration order; clear of system registers 2..7, 14 and the automatic 201..",
+  "AO": "AO default in a new project is TX_OUT 0..100 %; set explicitly so the verification checks it"
+ }
+}

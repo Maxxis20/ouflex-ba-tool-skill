@@ -1,0 +1,642 @@
+{
+ "_source": "Our own classification of block pins, by reading what each pin is for: param = a setting (limit, time, gain), config = a mode choice, state = internal. Pins not listed are signals (or state, for pins the library marks as internal parameters). check_plan.py uses it to decide which unconnected inputs deserve a warning. Keys are <block type>@<version>.",
+ "roles": {
+  "ADConversion@1.0": {
+   "BitCount": "param"
+  },
+  "AnalogAlarm@1.5": {
+   "AckOnDisable": "param",
+   "EntryDelay": "param",
+   "ExitDelay": "param",
+   "Group": "param",
+   "HighLimit": "param",
+   "Hysteresis": "param",
+   "LowLimit": "param",
+   "Priority": "param"
+  },
+  "AnalogValueWatchdog@1.0": {
+   "MaxAccept": "param",
+   "MinAccept": "param"
+  },
+  "AstroClock@1.0": {
+   "DaytimeOffset": "param",
+   "InLatNorth": "param",
+   "InLonEast": "param",
+   "UtcOffset": "param"
+  },
+  "AverageExtended@1.0": {
+   "MaxAvgInputs": "param",
+   "MinAvgInputs": "param",
+   "ValueMax": "param",
+   "ValueMin": "param"
+  },
+  "AverageExtender@1.0": {
+   "InfoOutSel": "param",
+   "MaxAvgInputs": "param",
+   "MinAvgInputs": "param",
+   "ValueMax": "param",
+   "ValueMin": "param"
+  },
+  "BinaryAlarm@1.3": {
+   "AckOnDisable": "param",
+   "EntryDelay": "param",
+   "ExitDelay": "param",
+   "Group": "param",
+   "Priority": "param"
+  },
+  "BitMask@1.1": {
+   "Mask": "param"
+  },
+  "Combine16to32@1.0": {
+   "Decimals": "param",
+   "Swap": "param"
+  },
+  "CompareText@1.1": {
+   "CaseSensitive": "param"
+  },
+  "Compensator@1.7": {
+   "In1": "param",
+   "In2": "param",
+   "Out1": "param",
+   "Out2": "param"
+  },
+  "ContradictionAlarm@1.2": {
+   "AckOnDisable": "param",
+   "EntryDelay": "param",
+   "ExitDelay": "param",
+   "Group": "param",
+   "Priority": "param"
+  },
+  "CountDown@1.4": {
+   "FallingEdge": "param",
+   "InitialValue": "param",
+   "Min": "param",
+   "RisingEdge": "param"
+  },
+  "CountUp@1.6": {
+   "FallingEdge": "param",
+   "InitialValue": "param",
+   "Max": "param",
+   "RisingEdge": "param"
+  },
+  "CountUpDown@1.3": {
+   "FallingEdge": "param",
+   "InitialValue": "param",
+   "Max": "param",
+   "Min": "param",
+   "RisingEdge": "param"
+  },
+  "CtrlOrganizer@1.0": {
+   "InOrder1": "param",
+   "InOrder10": "param",
+   "InOrder2": "param",
+   "InOrder3": "param",
+   "InOrder4": "param",
+   "InOrder5": "param",
+   "InOrder6": "param",
+   "InOrder7": "param",
+   "InOrder8": "param",
+   "InOrder9": "param"
+  },
+  "Curve_3p@1.13": {
+   "Max": "param",
+   "Min": "param",
+   "Out_0": "param",
+   "Out_n20": "param",
+   "Out_p20": "param"
+  },
+  "Curve_5p@1.5": {
+   "In2": "param",
+   "In3": "param",
+   "In4": "param",
+   "Max": "param",
+   "Min": "param",
+   "Out1": "param",
+   "Out2": "param",
+   "Out3": "param",
+   "Out4": "param",
+   "Out5": "param"
+  },
+  "DataStorageAn@1.0": {
+   "ChangeToSave": "param",
+   "Location": "param",
+   "WriteMode": "param"
+  },
+  "DataStorageAn@1.1": {
+   "ChangeToSave": "param",
+   "Location": "param"
+  },
+  "DataStorageBin@1.1": {
+   "Location": "param"
+  },
+  "DateTimeDetect@1.6": {
+   "Day": "param",
+   "Hour": "param",
+   "Min": "param",
+   "Month": "param",
+   "Sec": "param",
+   "Year": "param"
+  },
+  "Deadband@1.2": {
+   "DeadBand": "param"
+  },
+  "DemuxAn@1.0": {
+   "Default": "param"
+  },
+  "DemuxAn@2.2": {
+   "Default": "param"
+  },
+  "DemuxAn@3.0": {
+   "Default": "param"
+  },
+  "DemuxBin@1.0": {
+   "Default": "param"
+  },
+  "DemuxBin@2.0": {
+   "Default": "param"
+  },
+  "DemuxBin@3.2": {
+   "Default": "param"
+  },
+  "DemuxBin@4.0": {
+   "Default": "param"
+  },
+  "DemuxBitstr@1.0": {
+   "Default": "param"
+  },
+  "Derivator@1.3": {
+   "CtrlSpace": "param",
+   "Gain": "param"
+  },
+  "DeviationAlarm@1.2": {
+   "AckOnDisable": "param",
+   "EntryDelay": "param",
+   "ExitDelay": "param",
+   "Group": "param",
+   "Hysteresis": "param",
+   "MaxDeviation": "param",
+   "Priority": "param"
+  },
+  "FIFO@1.8": {
+   "BufferSize": "param"
+  },
+  "GetPropertyValue@2.3": {
+   "PropertyId": "param"
+  },
+  "GetPropertyValue@3.1": {
+   "PropertyId": "param"
+  },
+  "HW_Pid@1.5": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "Reverse": "param"
+  },
+  "HW_Pid@2.0": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "RevPDisable": "param",
+   "Reverse": "param"
+  },
+  "Integrator@1.3": {
+   "CtrlSpace": "param",
+   "Gain": "param"
+  },
+  "LIFO@1.5": {
+   "BufferSize": "param"
+  },
+  "Limit@1.1": {
+   "Max": "param",
+   "Min": "param"
+  },
+  "Linearization@1.7": {
+   "X1": "param",
+   "X10": "param",
+   "X2": "param",
+   "X3": "param",
+   "X4": "param",
+   "X5": "param",
+   "X6": "param",
+   "X7": "param",
+   "X8": "param",
+   "X9": "param",
+   "Y1": "param",
+   "Y10": "param",
+   "Y2": "param",
+   "Y3": "param",
+   "Y4": "param",
+   "Y5": "param",
+   "Y6": "param",
+   "Y7": "param",
+   "Y8": "param",
+   "Y9": "param"
+  },
+  "MotorDriver3p@1.6": {
+   "BreakBand": "param",
+   "CalibEn": "param",
+   "CloseTime": "param",
+   "DeadBand": "param",
+   "OpenTime": "param"
+  },
+  "MotorDriverV@1.2": {
+   "BreakBand": "param",
+   "CalibEn": "param",
+   "CloseTime": "param",
+   "DeadBand": "param",
+   "OpenTime": "param"
+  },
+  "NTC10ToCelcius@1.0": {
+   "ADCMax": "param",
+   "PullUpResistor": "param"
+  },
+  "ORBitMask@1.0": {
+   "Mask": "param"
+  },
+  "OffDelay@1.8": {
+   "DelayTime": "param"
+  },
+  "OffPulseDetect@1.4": {
+   "MaxTime": "param",
+   "MinTime": "param"
+  },
+  "OnDelay@1.6": {
+   "DelayTime": "param"
+  },
+  "OnOffDelay@1.5": {
+   "OffDelay": "param",
+   "OnDelay": "param"
+  },
+  "OnOffPulse@1.1": {
+   "OffTime": "param",
+   "OnTime": "param",
+   "StartState": "param"
+  },
+  "OnOffPulse@2.4": {
+   "OffTime": "param",
+   "OnTime": "param",
+   "StartState": "param"
+  },
+  "OnPulseDetect@1.3": {
+   "MaxTime": "param",
+   "MinTime": "param"
+  },
+  "OperatingState@1.1": {
+   "StateCount": "param"
+  },
+  "Override@1.1": {
+   "OverrideValue": "param"
+  },
+  "P_control@1.4": {
+   "DeadBand": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "Reverse": "param",
+   "SetPoint": "param"
+  },
+  "PeakPowerCut@1.0": {
+   "CutMaxOnTime": "param",
+   "CutMinOffTime": "param",
+   "CutStartSet": "param",
+   "CutStartSet2": "param",
+   "Mode": "param",
+   "PowAvgInT": "param",
+   "PowAvgOutT": "param"
+  },
+  "PeakPowerCut@2.0": {
+   "AvgOutDecrT": "param",
+   "AvgOutIncrT": "param",
+   "CutMaxOnTime": "param",
+   "CutMinOffTime": "param",
+   "CutStartSet": "param",
+   "CutStartSet2": "param",
+   "Mode": "param",
+   "PowAvgInT": "param"
+  },
+  "Pid@1.5": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "Reverse": "param"
+  },
+  "Pid@2.18": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "Reverse": "param",
+   "StageDownDelay": "param",
+   "StageUpDelay": "param"
+  },
+  "Pid@3.1": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "Reverse": "param",
+   "StageDownDelay": "param",
+   "StageUpDelay": "param"
+  },
+  "Pid@4.2": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "RevPDisable": "param",
+   "Reverse": "param",
+   "StageDownDelay": "param",
+   "StageUpDelay": "param"
+  },
+  "Pid@5.1": {
+   "Balance": "param",
+   "BreakBand": "param",
+   "CtrlSpace": "param",
+   "D": "param",
+   "DeadBand": "param",
+   "I": "param",
+   "Max": "param",
+   "Min": "param",
+   "P": "param",
+   "RevPDisable": "param",
+   "Reverse": "param",
+   "StageDownDelay": "param",
+   "StageUpDelay": "param"
+  },
+  "Pow@1.4": {
+   "B": "param"
+  },
+  "Pulse@1.5": {
+   "Mode": "param",
+   "PulseTime": "param"
+  },
+  "PulseCounterScaled@1.4": {
+   "BaseOutRatio": "param",
+   "CounterSet": "param",
+   "InBaseRatio": "param"
+  },
+  "PulseGen@1.0": {
+   "Invert": "param",
+   "PeriodLen": "param",
+   "PulseLen": "param"
+  },
+  "PulseMeter@1.2": {
+   "FilterTime": "param",
+   "SampleSpace": "param"
+  },
+  "PulseRelay@1.0": {
+   "Priority": "param"
+  },
+  "Pwm@1.3": {
+   "Interval": "param"
+  },
+  "Pwm@2.0": {
+   "Interval": "param"
+  },
+  "PwmToPercent@1.0": {
+   "Reverse": "param",
+   "Timeout": "param"
+  },
+  "RampAnalogDelay@1.5": {
+   "DrvTimeDown": "param",
+   "DrvTimeUp": "param",
+   "Max": "param",
+   "Min": "param",
+   "RevDelayDown": "param",
+   "RevDelayUp": "param"
+  },
+  "RampAnalogHyst@1.3": {
+   "DrvTimeDown": "param",
+   "DrvTimeUp": "param",
+   "HysteresisDown": "param",
+   "HysteresisUp": "param",
+   "Max": "param",
+   "Min": "param"
+  },
+  "RampControl@1.1": {
+   "Balance": "param",
+   "DeadBand": "param",
+   "Max": "param",
+   "Min": "param",
+   "RampTime": "param",
+   "Reverse": "param"
+  },
+  "RampControl@2.0": {
+   "Balance": "param",
+   "DeadBand": "param",
+   "Max": "param",
+   "Min": "param",
+   "RampTime": "param",
+   "Reverse": "param"
+  },
+  "RampDown@1.2": {
+   "Max": "param",
+   "Min": "param",
+   "RampTime": "param"
+  },
+  "RampDown@2.0": {
+   "Max": "param",
+   "Min": "param",
+   "RampTime": "param"
+  },
+  "RampUp@1.2": {
+   "Max": "param",
+   "Min": "param",
+   "RampTime": "param"
+  },
+  "RampUp@2.0": {
+   "Max": "param",
+   "Min": "param",
+   "RampTime": "param"
+  },
+  "RampUpDown@1.3": {
+   "Max": "param",
+   "Min": "param",
+   "RampTimeDown": "param",
+   "RampTimeUp": "param"
+  },
+  "ReadModbus@1.0": {
+   "BusDevObjID": "config",
+   "BusType": "config",
+   "Decimals": "param",
+   "Function": "config",
+   "NoRespAlrLimit": "param",
+   "Port": "config",
+   "ReadInterval": "param",
+   "Register": "config",
+   "RegisterCount": "config",
+   "SlaveAddress": "config",
+   "SwapWord": "config",
+   "TcpAddrPart1": "config",
+   "TcpAddrPart2": "config",
+   "TcpAddrPart3": "config",
+   "TcpAddrPart4": "config"
+  },
+  "ReadModbusMultiple@1.0": {
+   "BusDevObjID": "config",
+   "BusType": "config",
+   "Function": "config",
+   "NoRespAlrLimit": "param",
+   "Port": "config",
+   "ReadInterval": "param",
+   "RegisterCount": "config",
+   "RegisterStart": "config",
+   "SlaveAddress": "config",
+   "TcpAddrPart1": "config",
+   "TcpAddrPart2": "config",
+   "TcpAddrPart3": "config",
+   "TcpAddrPart4": "config"
+  },
+  "Round@1.1": {
+   "Decimals": "param"
+  },
+  "RoundDown@1.1": {
+   "Decimals": "param"
+  },
+  "RoundUp@1.1": {
+   "Decimals": "param"
+  },
+  "RunTimeCounter@1.4": {
+   "RunTimeSet": "state"
+  },
+  "SequencingModule@1.1": {
+   "StageCount": "param"
+  },
+  "SetPointSync@1.4": {
+   "Default": "param",
+   "SyncSpace": "param"
+  },
+  "SetPointSyncAn@1.0": {
+   "StartDelay": "param"
+  },
+  "SetPointSyncBin@1.0": {
+   "StartDelay": "param"
+  },
+  "SetPropertyValue@3.0": {
+   "PropertyId": "param"
+  },
+  "SetPropertyValue@4.3": {
+   "PropertyId": "param"
+  },
+  "Shl@1.2": {
+   "Shift": "param"
+  },
+  "Shr@1.1": {
+   "Shift": "param"
+  },
+  "SignalFilter@1.1": {
+   "TimeConstant": "param"
+  },
+  "SignalSplitter@1.3": {
+   "Max": "param",
+   "Min": "param",
+   "StageOrder1": "param",
+   "StageOrder2": "param",
+   "StageOrder3": "param",
+   "StageOrder4": "param",
+   "StageOrder5": "param",
+   "StageOrder6": "param",
+   "StageOrder7": "param",
+   "StageOrder8": "param"
+  },
+  "StartDelay@1.2": {
+   "DelayTime": "param"
+  },
+  "StateSync@1.2": {
+   "Default": "param",
+   "SyncSpace": "param"
+  },
+  "StopWatch@1.0": {
+   "TimeBase": "param"
+  },
+  "Thermostat@1.1": {
+   "Hysteresis": "param",
+   "Mode": "param",
+   "Reverse": "param",
+   "Setpoint": "param"
+  },
+  "TimeProgPredictAn@1.4": {
+   "PredictStat": "param",
+   "PredictTime": "param"
+  },
+  "TimeProgPredictAn@2.1": {
+   "PredictStat": "param",
+   "PredictTime": "param"
+  },
+  "TimeProgPredictBin@1.4": {
+   "PredictStat": "param",
+   "PredictTime": "param"
+  },
+  "TimeProgPredictBin@2.1": {
+   "PredictStat": "param",
+   "PredictTime": "param"
+  },
+  "TimerSwitch@1.4": {
+   "StepCount": "param",
+   "StepLength": "param",
+   "TimerStep": "state"
+  },
+  "U64Div1000@1.0": {
+   "SwapMode": "param"
+  },
+  "ValueChangeDetect@1.7": {
+   "DeadBand": "param"
+  },
+  "WeekDayDetect@1.3": {
+   "DayOfWeek": "param"
+  },
+  "WriteModbus@1.0": {
+   "BusDevObjID": "config",
+   "BusType": "config",
+   "Decimals": "param",
+   "Function": "config",
+   "NoRespAlrLimit": "param",
+   "Port": "config",
+   "Register": "config",
+   "RegisterCount": "config",
+   "SlaveAddress": "config",
+   "SwapWord": "config",
+   "TcpAddrPart1": "config",
+   "TcpAddrPart2": "config",
+   "TcpAddrPart3": "config",
+   "TcpAddrPart4": "config",
+   "WriteInterval": "param"
+  },
+  "XORBitMask@1.0": {
+   "Mask": "param"
+  }
+ }
+}
