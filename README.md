@@ -22,6 +22,8 @@ What is in the skill:
 - `examples/dh2/`: a second example, two heating circuits with night setback by time programs, texts in three
   languages, the controller's display menu, a Web UI page and a simulator scenario (`pipeline/sim_test.py`).
 
+![dh2: the Web UI page the build makes, live in the tool's preview](examples/dh2/webui.png)
+
 ![District heating example: the heating application in Application Builder](examples/dh-ex2/TC2_HEAT.png)
 
 ## What you need
@@ -85,9 +87,9 @@ do not click or type; `gui.sh` does, when the agent uses it to look at something
   directly. The bash wrappers in `scripts/*.sh` were only syntax-checked, and the two Python steps of the example
   build (generate, verify) ran on another computer, because the test machine has neither Git Bash nor Python.
   Expect the first faults in paths and quoting between bash and PowerShell.
-- `examples/dh2` and `pipeline/sim_test.py` were built and run with the same helpers, but driven from another
-  computer, not through this repository's local scripts. The display menu and Web UI scripts have no build stage
-  here (run them by hand, see `examples/dh2/README.md`).
+- `examples/dh2` was built with this repository's scripts on the same machine (PowerShell side, every stage including
+  `hmi` and `webui`; the comparisons ran on another computer, all OK). `pipeline/sim_test.py` was run only from
+  another computer, driving the same helpers.
 - Not tried: other tool versions, other Windows versions, an account without administrator rights, display
   scaling other than 100 %.
 - Tied to tool internals: private fields and methods of BA Tool 2.130.14.1, found by reading its objects at run

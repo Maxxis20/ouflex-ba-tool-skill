@@ -20,7 +20,7 @@ Pin sources (one per input pin; pins not given are left untouched):
     net(NAME)        signal written by another application (device-level wire between applications)
     io("UI 3")       physical input point
     tprg(NAME, default, week, display, states)  time program (schedule) on an Enum block input; week = 7 day strings
-                     Monday..Sunday, 'HH:MM=v,HH:MM=v'; give 00:00 explicitly (before the first entry the default applies)
+                     Monday..Sunday, 'HH:MM=v,HH:MM=v'; a state holds until the next entry, across midnight and days
 Output targets: measure(...), net(NAME), io("AO 1").
 
 Execution order = declaration order inside an application; a wire from a block declared later is flagged

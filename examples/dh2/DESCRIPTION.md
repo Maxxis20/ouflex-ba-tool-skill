@@ -123,9 +123,9 @@ point, not an alarm.
 
 - **Time program `Cn_TPRG`.** An On/Off weekly time program (the tool's time program object, not a block),
   states **0 = Setback**, **1 = Comfort**. It sits on the `Select` input of the setback switch `nsb`.
-- **Default week:** every day `00:00` Setback, `06:00` Comfort, `22:00` Setback, so comfort runs 06:00–22:00.
-  The `00:00` entry is written on purpose: before a day's first entry the program's default value applies,
-  and the default is 1 (Comfort), so a program that is cleared by mistake heats normally.
+- **Default week:** every day `06:00` Comfort and `22:00` Setback, so comfort runs 06:00–22:00. A state holds
+  until the next entry, also over midnight, so the 22:00 setback lasts until 06:00 the next morning (checked in
+  the simulator). The program's default value is 1 (Comfort).
 - **Setback.** While the program is 0, `Cn_SETBACK` °C is subtracted from the curve value (after the offset,
   before the limits). While it is 1, nothing is subtracted. Defaults: 10 °C for the radiators, 3 °C for the
   floor heating, which reacts slowly and is not lowered much.
@@ -169,7 +169,7 @@ does with an out-of-range write is not known, so the HMI validates before it wri
 
 | Name | Type | States | Default value | Default week (every day) |
 |---|---|---|---|---|
-| `Cn_TPRG` | On/Off | 0 = Setback, 1 = Comfort | 1 | 00:00 Setback, 06:00 Comfort, 22:00 Setback |
+| `Cn_TPRG` | On/Off | 0 = Setback, 1 = Comfort | 1 | 06:00 Comfort, 22:00 Setback |
 
 **Fixed constants:**
 
@@ -452,9 +452,10 @@ either way or the risk is named.
   doc ("If Select = 0, Output = Input0") decide.
 
 **Time program**
-- **Not stated:** the value between midnight and a day's first entry (BACnet-style schedules use the default
-  value; the week therefore starts every day with `00:00`). Daylight saving time and a clock that was never
-  set (it is a real-time clock program).
+- **Checked in the simulator:** before a day's first entry the state of the previous entry holds (a Monday 20:00
+  setback was still 0 on Tuesday 21:05, before Tuesday's only entry at 22:30; the default 1 was not used).
+- **Not stated:** when the default value applies (a program without entries is the likely case, not tested).
+  Daylight saving time and a clock that was never set (it is a real-time clock program).
 - **Simulator:** the virtual Ouflex C evaluates the program from the Windows machine's local clock and weekday when the
   program starts (Load or Reset), not while it runs, and a written value is not taken. The scenarios test the
   setback logic with two copies of C1 whose weeks are all Comfort or all Setback.

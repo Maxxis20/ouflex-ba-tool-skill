@@ -100,8 +100,8 @@ style; do not copy the example when asked to design something from a description
 |---|---|
 | `pipeline/make_ouflex_build.py <dir>` | plan JSON → `<out>/`: `apps/<APP>_<n>.ps1` (≤150 operations each), `dev_2_io`, `dev_3_import`, `dev_4_wires`, `modbus_set.ps1`, `expected.json` (includes the program config). Naming rules and layout are constants at its top; I/O kinds have defaults there and program.json can add or override them |
 | `win/prelude.ps1` build helpers | `B` block, `IP` interface pin, `W` wire, `K` constant, `SETV`/`SVL` set value (+fan-out), `TPRG` time program, `MS` measure, `LB` label, `HU` hide unused pins, `EO` execution order, `AppName`; device: `BP` bus point, `IOC`/`IOP` I/O config, `IMP` import app, `DW` device wire, `MBR` Modbus register; `Dump-App`, `Dump-Device`, `Dump-Modbus`, `Check-Project`, `Capacity`. All idempotent: a rerun after a failure adds only what is missing |
-| `scripts/build.sh <dir>` | stages `gen apps device modbus filecheck shots` + optional `deliver` (`STAGES=`, `APPS=`, `KEEP_GOING=1`). Per application: fresh `NewApplication.ouear` → scripts → `Check` → save → restart on the file → `Dump-App` → verify → screenshot. Then device level in a new project made by code (`paths.base` = `new`) or on a fresh copy of `paths.base` (bus modules from program.json, I/O, import, wires, save, reopen, `Dump-Device`), then Modbus (export, `modbus_set`, save, reopen, export, `Get-ModbusMap`), then `filecheck` (`win/projdump.ps1` reads the saved Device.bin without the tool). Stops at the first `FAIL`, `TIMEOUT` or difference. The device stage stops every hosted instance |
-| `pipeline/verify_ouflex_build.py <dir> app\|device\|modbus\|file ...` | compares the read-back dumps with `expected.json` (plan only): blocks (type, version, x/y, execution order, overlaps), wires, constants, set values, measures, interface pins, labels, drawn lines; device wires, I/O config, application order, the tool's check; Modbus plan-vs-built table |
+| `scripts/build.sh <dir>` | stages `gen apps device modbus hmi webui filecheck shots` + optional `deliver` (`STAGES=`, `APPS=`, `KEEP_GOING=1`). Per application: fresh `NewApplication.ouear` → scripts → `Check` → save → restart on the file → `Dump-App` → verify → screenshot. Then device level in a new project made by code (`paths.base` = `new`) or on a fresh copy of `paths.base` (bus modules from program.json, I/O, import, wires, save, reopen, `Dump-Device`), then Modbus (export, `modbus_set`, save, reopen, export, `Get-ModbusMap`), then `hmi` (program.json `"hmi"`: the controller's display menu, `hmi_set.ps1`, save, reopen, `Dump-Hmi`) and `webui` (`"webui"`/`"trends"`: Web UI pages with their link registry, trend logs and groups, `web_set.ps1`, save, reopen, `Dump-Web`/`Dump-Trend`), each only when program.json has it, then `filecheck` (`win/projdump.ps1` reads the saved Device.bin without the tool). Stops at the first `FAIL`, `TIMEOUT` or difference. The device stage stops every hosted instance |
+| `pipeline/verify_ouflex_build.py <dir> app\|device\|modbus\|hmi\|webui\|file ...` | compares the read-back dumps with `expected.json` (plan only): blocks (type, version, x/y, execution order, overlaps), wires, constants, set values, measures, interface pins, labels, drawn lines; device wires, I/O config, application order, the tool's check; Modbus plan-vs-built table; display menu (order, depth, texts per language, state texts); Web UI links resolved, trend logs and groups |
 
 Rules the pipeline depends on: names are case-insensitively unique per application and a clash opens a modal
 dialog, so the generator resolves clashes up front (set value / measure names win, net pins get `_N`, I/O pins
@@ -118,23 +118,24 @@ A time program is not a block. The tool attaches it to an Enum **block input pin
 example `SwitchAn.Select`, switching a setback amount in and out). Never put it on an application interface pin: the
 tool drops it from the object list at the next sync, so it is not saved.
 - In a plan: `tprg(NAME, default, week, display, ["Off text", "On text"])` from `pipeline/oufplan.py`. The week is 7
-  strings, Monday first, `'00:00=0,06:00=1,22:00=0'`. Give 00:00 explicitly.
+  strings, Monday first, `'06:00=1,22:00=0'`. A state holds until the next entry,
+  across midnight.
 - The apps stage writes it with `TPRG` after the constants. It is checked after reopen and again in the saved file.
 - State texts come from texts.json `states`.
 - By hand: `TPRG $cv 'blk.pin' NAME default @(7 days) display @(off, on)`.
 Details, including the Modbus registers the tool gives each program: findings, "Time programs".
 
-## More by hand (helpers in `win/prelude.ps1`, no build stage here)
+## More helpers (`win/prelude.ps1`)
 
 - **Simulator**, no controller needed: `hstart.sh dbg ApplicationDebugger.exe '<app.ouear>' lang=en-GB`, then
   `Sim-Load`, `Sim-Run`, `Sim-Set`, `Sim-Get`, `Sim-Reset` and `Sim-Factor 100` (time 100× faster).
 - **Time programs in the simulator**: the virtual device evaluates a program from the PC clock only at Load or
   Reset, so set its state with `Sim-Week NAME @(7 days)`.
-- **Display menu** of the controller: `HF` folder, `HD` row dropped from an application's generated menu, `HST`
-  state texts, `Dump-Hmi`.
-- **Web UI pages**: `WEBP <name> <page.json>` fills the page's link registry from the project. `Dump-Web` reads
+- **Display menu** of the controller (build stage `hmi`): `HF` folder, `HD` row dropped from an application's
+  generated menu, `HST` state texts, `Dump-Hmi`.
+- **Web UI pages** (build stage `webui`): `WEBP <name> <page.json>` fills the page's link registry from the project. `Dump-Web` reads
   it back.
-- **Trends**: `TRD` trend log per point, `TGRP` groups, `Dump-Trend`.
+- **Trends** (build stage `webui`): `TRD` trend log per point, `TGRP` groups, `Dump-Trend`.
 
 Model and limits of each: findings, sections "Simulation without a controller", "Local HMI", "Web UI pages" and
 "Trends".

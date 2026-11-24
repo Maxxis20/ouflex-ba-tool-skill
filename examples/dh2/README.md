@@ -6,7 +6,24 @@ pump with summer stop and pump exercise, sensor fault handling, deviation alarm.
 AI agent with this skill from `DESCRIPTION.md`.
 
 4 applications, 73 function blocks, 38 set values, 2 time programs, 22 measurements, 10 physical points.
-Texts in English, Finnish and Swedish.
+Texts in English, Finnish and Swedish (the pictures show the Finnish project language).
+
+![Web UI page in the tool's preview: both circuits with live values from the virtual controller](webui.png)
+
+The Web UI page as built, in BA Tool's preview. The virtual Ouflex A runs the program, so the values are live:
+setpoints 41 / 28 °C, pumps on, valves open, no sensors connected (0 °C). Each circuit has its heating curve, a
+settings icon and a clock: the time program.
+
+![The time program of circuit 1 opened from the clock on the Web UI page](webui_timeprogram.png)
+
+The clock opens the circuit's time program: Normaali (comfort) from 06:00, Pudotus (setback) from 22:00, every day.
+The state holds over midnight until the next switch.
+
+| The display menu: circuit 1 | Its time program on the display |
+|---|---|
+| ![Display menu of circuit 1](display_circuit.png) | ![Week view of the time program on the display](display_timeprogram.png) |
+
+The controller's own display (BA Tool's virtual display), built from `program.json` `hmi`.
 
 | File | What |
 |---|---|
@@ -24,12 +41,10 @@ Set-up from the main README done (`scripts/batool.sh check` shows no TODO), from
 ```bash
 python examples/dh2/make_plan.py              # optional: writes plan.json again
 python pipeline/check_plan.py examples/dh2
-scripts/build.sh examples/dh2                  # applications, device, Modbus, saved-file check
+scripts/build.sh examples/dh2                  # applications, device, Modbus, display menu, Web UI, saved-file check
 ```
 
-The build here has no stages for the display menu and the Web UI. The generator writes `hmi_set.ps1` and
-`web_set.ps1` into `build/`. Run them on the built project by hand in a hosted ProjectManager
-(`HNAME=pm hrun.sh`): open the project, run the script, then `Save-Project`.
+Every stage saves, reopens and reads back what it built, then compares it with the plan (`build/out/*.verify.txt`).
 
 ## Test it in the simulator
 

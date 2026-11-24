@@ -3,7 +3,8 @@
 #   <program dir> holds program.json and the plan (plan.json). Outputs: <program dir>\<out>\ (build scripts, expected.json)
 #   and <out>\out\ (dumps read back from the tool, *.verify.txt, screenshots, the Modbus document).
 # Environment:
-#   STAGES      default "gen apps device modbus filecheck shots"; add "deliver" to copy the built project to paths.deliver
+#   STAGES      default "gen apps device modbus hmi webui filecheck shots"; add "deliver" to copy the built project to
+#               paths.deliver. hmi and webui run only when program.json has "hmi" / "webui" or "trends"
 #   APPS        limit the apps stage to these applications, e.g. "TC1_DHW ALARM"
 #   KEEP_GOING  1 = do not stop at the first difference
 #   KEEP_OPEN   1 = leave the hosted tool windows open at the end (the open project stays locked until they are closed)
@@ -30,7 +31,7 @@ function Build-Program([string]$pdir) {
   $script:failed = $null
   function Say([string]$m) { Write-Host ('[{0,4}s] {1}' -f [int]((Get-Date) - $t0).TotalSeconds, $m) }
   function Stop-Build([string]$m) { Say "STOP: $m"; $script:failed = $m }
-  $stages = @($(if ($env:STAGES) { $env:STAGES } else { 'gen apps device modbus filecheck shots' }) -split '\s+' | ? { $_ })
+  $stages = @($(if ($env:STAGES) { $env:STAGES } else { 'gen apps device modbus hmi webui filecheck shots' }) -split '\s+' | ? { $_ })
   function Has([string]$s) { $stages -contains $s }
   $keep = [bool]$env:KEEP_GOING
   $verify = "$env:VERIFY" -ne 'off'
@@ -201,6 +202,25 @@ function Build-Program([string]$pdir) {
     if (-not (HRun pm "`$cv=TopCanvas; ToFile $(Q $dump) { Dump-Modbus `$cv }; `$r=@(Get-ModbusMap $(Q "${WMB}.html")); `$h=`$r[0].PSObject.Properties.Name; ToFile $(Q $tsv) { (`$h -join `"``t`"); foreach(`$x in `$r){ (`$h | % { `$x.`$_ }) -join `"``t`" } }" 'mbdump')) { Stop-Build 'modbus dump failed'; return 1 }
     Copy-Item "${WMB}.html" (Join-Path $O ((Split-Path -Leaf $WMB) + '.html')) -Force
     if (-not (Verify @('modbus', $dump, $tsv) (Join-Path $O 'modbus.verify.txt'))) { Stop-Build "Modbus map differs from the rule (see $O\modbus.verify.txt)"; return 1 }
+  }
+  # display menu (program.json "hmi") and Web UI pages + trends ("webui", "trends"): the generated script on a fresh
+  # ProjectManager (no other project, so no hidden "save changes?" prompt), save, reopen, read back, compare
+  foreach ($st in @(@{ n='hmi'; f='hmi_set.ps1'; t='== display menu: program.json hmi, save, reopen, read back'; d='Dump-Hmi'; v='hmi' },
+                    @{ n='webui'; f='web_set.ps1'; t='== Web UI pages and trends: link registry from the project, save, reopen, read back'; d='Dump-Web; Dump-Trend'; v='webui' })) {
+    if (-not (Has $st.n) -or -not (Test-Path (Join-Path $B $st.f))) { continue }
+    Say $st.t
+    # the Web UI editor runs a virtual Ouflex A (OuflexA.exe) that outlives ProjectManager; a leftover one makes the next
+    # Web UI page open the modal "Virtual device is already in use"
+    if ($st.n -eq 'webui') { Get-Process OuflexA -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
+    $flprj = "$WPROJ\$(Flprj $WPROJ)"
+    if (-not (Start-Inst pm 'ProjectManager.exe')) { Stop-Build 'ProjectManager did not start'; return 1 }
+    if (-not (HRun pm "Open-Project $(Q $flprj)" "$($st.n)0")) { Stop-Build 'open failed'; return 1 }
+    if (-not (HRun pm (". " + (Q (Join-Path $B $st.f)) + "; Save-Project; 'saved'") "$($st.n)set")) { Stop-Build "$($st.f) failed (a rerun is safe: every helper is idempotent)"; return 1 }
+    if (-not (Start-Inst pm 'ProjectManager.exe')) { Stop-Build 'ProjectManager did not restart'; return 1 }
+    if (-not (HRun pm "Open-Project $(Q $flprj)" "$($st.n)reopen")) { Stop-Build 'reopen failed'; return 1 }
+    $dump = Join-Path $O "$($st.v).dump.txt"
+    if (-not (HRun pm "ToFile $(Q $dump) { $($st.d) }" "$($st.n)dump")) { Stop-Build "$($st.n) dump failed"; return 1 }
+    if (-not (Verify @($st.v, $dump) (Join-Path $O "$($st.v).verify.txt"))) { Stop-Build "$($st.n) differs from program.json (see $O\$($st.v).verify.txt)"; return 1 }
   }
   if (Has 'filecheck') {
     Say '== saved project read with the tool''s DLLs, no tool window involved (projdump.ps1)'

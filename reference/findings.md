@@ -582,8 +582,13 @@ A time program (schedule) is no block: it is an object the tool attaches to a bl
   without its dialogs and is idempotent (a rerun rewrites name, type, default, texts and week). A day is
   `'HH:MM=v,HH:MM=v'` (Monday first). `Dump-App` prints `TPP|blk.pin|name|sym=True`,
   `TP|name|type|default|week|en`, `TX|...` and `TS|name|off langs|on langs`; `projdump.ps1` prints `FTPP`/`FTP`.
-- **Give 00:00 explicitly**: between midnight and the day's first entry a BACnet-style schedule uses the default value (not
-  checked on the device), so the dh2 week is `00:00=0,06:00=1,22:00=0` with default 1.
+- **A state holds until the next entry, across midnight** (checked in the simulator 2026-11-24: Monday `20:00=0`,
+  Tuesday only `22:30=1`, default 1 → 0 on Tuesday 21:05, so the previous entry carried over, not the default).
+  No 00:00 entry is needed: the dh2 week is `06:00=1,22:00=0` (an earlier build wrote a redundant `00:00=0`).
+- **Web UI week editor** (clock component, preview on the virtual Ouflex A): lists the entries per weekday correctly
+  (06:00 Normaali, 22:00 Pudotus) and the current value, and has Käsiajo (manual), Poikkeuskalenteri and
+  Erikoispäivät tabs. Its day bars stay empty with one "Norm…" marker at hour 0, with or without a 00:00 entry; not
+  explained (maybe the virtual device), not seen on a controller. The display's week view draws the bars correctly.
 - **Simulator** (virtual Ouflex C, `ApplicationDebugger`):
   - The program runs on the Windows machine's **local** clock and weekday (a Tuesday-only program was 1 on a Tuesday; 17:45 UTC =
     19:45 local was already past).

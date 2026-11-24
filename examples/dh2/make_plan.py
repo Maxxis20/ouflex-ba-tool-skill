@@ -41,7 +41,7 @@ P.measure_io("TP_RET", "UI 3", "°C", 1, "DH primary return temperature")
 TOUT_LO, TOUT_HI = -45.0, 50.0
 TS_LO, TS_HI = -20.0, 120.0
 SENSOR_FAULT_DELAY = 10.0       # s, before a sensor fault is reported (substitution acts at once)
-COMFORT_DAY = "00:00=0,06:00=1,22:00=0"   # time program default: comfort 06:00-22:00 every day (00:00 given: before the first entry the default applies)
+COMFORT_DAY = "06:00=1,22:00=0"   # time program default: comfort 06:00-22:00 every day; 22:00 setback holds over midnight until 06:00
 
 # ------------------------------------------------------------------------------------------- COMMON
 a = P.app("COMMON", "Outdoor temperature: range check, fallback value, slow filter; shared by both circuits")
