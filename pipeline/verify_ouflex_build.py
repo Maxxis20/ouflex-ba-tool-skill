@@ -6,14 +6,16 @@ against <out>/expected.json, which make_ouflex_build.py derives from the program
   verify_ouflex_build.py <program dir> device <dump.txt>
   verify_ouflex_build.py <program dir> modbus <dump.txt> <map.tsv> prints the plan-vs-built table (markdown) too
   verify_ouflex_build.py <program dir> file <file.dump.txt>       the saved Device.bin read without the tool
+  verify_ouflex_build.py <program dir> hmi <hmi.dump.txt>         local HMI device menu (Dump-Hmi) against program.json "hmi"
+  verify_ouflex_build.py <program dir> webui <web.dump.txt>       Web UI pages and trends (Dump-Web + Dump-Trend): pages, links, trend logs, groups
 The program.json "out" of <program dir> names the folder holding expected.json.
 """
 import json, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MODES = ("app", "device", "modbus", "file")
+MODES = ("app", "device", "modbus", "file", "hmi", "webui")
 if len(sys.argv) < 3 or sys.argv[1] in MODES:
-    raise SystemExit("usage: verify_ouflex_build.py <program dir> app|device|modbus|file ...; give a program directory (a folder with program.json and plan.json), e.g. examples/dh-ex2")
+    raise SystemExit("usage: verify_ouflex_build.py <program dir> app|device|modbus|file|hmi|webui ...; give a program directory (a folder with program.json and plan.json), e.g. examples/dh-ex2")
 PDIR = os.path.abspath(sys.argv.pop(1))
 _cfg = json.load(open(os.path.join(PDIR, "program.json"), encoding="utf-8")) if os.path.exists(os.path.join(PDIR, "program.json")) else {}
 EXP = json.load(open(os.path.join(PDIR, _cfg.get("out", "build"), "expected.json"), encoding="utf-8"))
@@ -43,6 +45,34 @@ def same(a, b):
     if x is not None and y is not None:
         return abs(x - y) < 1e-6
     return str(a) == str(b)
+
+
+def langmap(field):
+    """'en-GB=Text^fi-FI=Teksti^...' -> dict"""
+    out = {}
+    for part in (field or "").split("^"):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            out[k] = v
+    return out
+
+
+def check_texts(path, diffs, notes):
+    """TX|object|lang=text^... lines (every language of a display name) against expected.json texts (the plan's English
+    plus texts.json translations). Only the languages the plan gives are compared."""
+    want = EXP.get("texts") or {}
+    n = 0
+    for line in open(path, encoding="utf-8-sig"):
+        f = line.rstrip("\r\n").split("|", 2)
+        if len(f) < 3 or f[0] != "TX" or f[1] not in want:
+            continue
+        got = langmap(f[2])
+        for k, v in want[f[1]].items():
+            n += 1
+            if got.get(k) != v:
+                diffs.append(f"{f[1]} text {k}: plan {v!r} built {got.get(k)!r}")
+    if n:
+        notes.append(f"texts checked: {n} (languages {', '.join(EXP.get('languages') or ['en-GB'])})")
 
 
 def verify_app(app, path):
@@ -115,6 +145,26 @@ def verify_app(app, path):
             if not same(g[7], s["decimals"]): diffs.append(f"set value {n} decimals {g[7]} != {s['decimals']}")
     for n in sv:
         if n not in e["setvalues"]: diffs.append(f"extra set value object {n}")
+    # time programs: pin, type, default value, week (Monday..Sunday), state texts per language
+    tpp = {f[1]: f for f in by.get("TPP", [])}
+    tp = {f[1]: f for f in by.get("TP", [])}
+    ts = {f[1]: f for f in by.get("TS", [])}
+    for n, t in (e.get("tprgs") or {}).items():
+        g = tpp.get(t["pin"])
+        if not g or g[2] != n: diffs.append(f"time program {n} not on {t['pin']} (found {g[2] if g else None})")
+        elif g[3] != "sym=True": diffs.append(f"time program {n}: clock symbol not shown on {t['pin']}")
+        g = tp.get(n)
+        if not g: diffs.append(f"time program {n} missing"); continue
+        if g[2] != t["type"]: diffs.append(f"time program {n} type {g[2]} != {t['type']}")
+        if not same(g[3], t["default"]): diffs.append(f"time program {n} default {g[3]} != {t['default']}")
+        if g[4] != ";".join(t["week"]): diffs.append(f"time program {n} week {g[4]!r} != {';'.join(t['week'])!r}")
+        if t.get("states"):
+            st = ts.get(n)
+            off, on = (langmap(st[2]), langmap(st[3])) if st and len(st) > 3 else ({}, {})
+            for lg, v in t["states"].items():
+                if f"{off.get(lg)}/{on.get(lg)}" != v: diffs.append(f"time program {n} states {lg}: {off.get(lg)}/{on.get(lg)} != {v}")
+    for n in tp:
+        if n not in (e.get("tprgs") or {}): diffs.append(f"extra time program {n}")
     # measures
     msp = {f[1]: f[2] for f in by.get("MSP", [])}
     for src, n in e["measure_pins"].items():
@@ -164,10 +214,11 @@ def verify_app(app, path):
     if lines != len(e["wires"]) + n_out_wires:
         diffs.append(f"{lines} drawn lines, expected {len(e['wires']) + n_out_wires}")
     counts = {"blocks": (len(got), len(e["blocks"])), "wires": (len(w), len(e["wires"])), "consts": (len(set(k) & set(e["consts"])), len(e["consts"])),
-              "setvalues": (len(sv), len(e["setvalues"])), "measures": (len(ms), len(e["measures"])),
+              "setvalues": (len(sv), len(e["setvalues"])), "tprgs": (len(tp), len(e.get("tprgs") or {})), "measures": (len(ms), len(e["measures"])),
               "inpins": (sum(1 for f in ip.values() if f[2] == "EditorInputPin"), len(e["inpins"])),
               "outpins": (sum(1 for f in ip.values() if f[2] == "EditorOutputPin"), len(e["outpins"])), "labels": (len(lab), len(e["labels"])),
               "globalpins": (len(gp), len(e.get("globalpins", {}))), "globals": (len(gl), len(e.get("globals", [])))}
+    check_texts(path, diffs, notes)
     return diffs, notes, counts
 
 
@@ -227,6 +278,7 @@ def verify_device(path):
     for f in by.get("CHECK", []):
         if f[1] in e["apps"] and f[2] != "True": diffs.append(f"CheckAll {f[1]} = {f[2]}: {f[3]}")
     notes += [l for l in text.splitlines() if l.startswith(("CHECK|", "CAPACITY|"))]
+    check_texts(path, diffs, notes)
     return diffs, notes
 
 
@@ -302,6 +354,15 @@ def verify_file(path):
         extra_k = [d for d in fk if d not in e["consts"]]
         fsvp = {f[2]: f[3] for f in by.get("FSVP", []) if f[1] == app}
         if fsvp != e["setvalue_pins"]: diffs.append(f"{app}: set value pins in file {fsvp} != {e['setvalue_pins']}")
+        ftpp = {f[2]: f[3] for f in by.get("FTPP", []) if f[1] == app}
+        ftp = {f[2]: f for f in by.get("FTP", []) if f[1] == app}
+        for n, t in (e.get("tprgs") or {}).items():
+            if ftpp.get(t["pin"]) != n: diffs.append(f"{app}: time program on {t['pin']} is {ftpp.get(t['pin'])!r} in file, expected {n}")
+            g = ftp.get(n)
+            if not g: diffs.append(f"{app}: time program {n} missing in file"); continue
+            if g[3] != t["type"] or not same(g[4], t["default"]) or g[5] != ";".join(t["week"]): diffs.append(f"{app}: time program {n} in file {g[3:6]}")
+        for n in ftp:
+            if n not in (e.get("tprgs") or {}): diffs.append(f"{app}: extra time program {n} in file")
         fsv = {f[2]: f for f in by.get("FSV", []) if f[1] == app}
         for n, s in e["setvalues"].items():
             g = fsv.get(n)
@@ -330,6 +391,117 @@ def verify_file(path):
     return diffs, notes
 
 
+def verify_hmi(path):
+    """Dump-Hmi lines HMI|depth|kind|object|en|lang=text^...|lang=off/on^..., in menu order. System menus (kind sys) must
+    stay; every expected folder, row and curve view must appear in the same order, depth and object, with the plan's
+    texts in every language it gives; state texts of binary rows likewise; curve points as a set."""
+    diffs, notes = [], []
+    got, sysm = [], []
+    for line in open(path, encoding="utf-8-sig"):
+        f = line.rstrip("\r\n").split("|")
+        if len(f) < 5 or f[0] != "HMI":
+            continue
+        f += [""] * (7 - len(f))
+        d, k, o, en = int(f[1]), f[2], f[3], f[4]
+        if k == "sys":
+            sysm.append(en)
+        elif k == "cpt":
+            if got and got[-1]["kind"] == "curve":
+                got[-1].setdefault("points", []).append(o)
+        else:
+            got.append({"depth": d, "kind": k, "object": o, "en": en, "texts": langmap(f[5]), "states": langmap(f[6])})
+    want = EXP.get("hmi") or []
+    if not sysm:
+        diffs.append("system menus missing (System settings / Alarms / Point info)")
+    notes.append(f"system menus kept: {len(sysm)}; expected entries {len(want)}, built {len(got)}; languages {', '.join(EXP.get('languages') or ['en-GB'])}")
+    for i in range(max(len(want), len(got))):
+        w = want[i] if i < len(want) else None
+        g = got[i] if i < len(got) else None
+        if w is None:
+            diffs.append(f"extra entry {g}")
+            continue
+        if g is None:
+            diffs.append(f"missing {w['kind']} {w['en']!r} ({w['object']})")
+            continue
+        for key in ("depth", "kind", "object", "en"):
+            if str(w[key]) != str(g[key]):
+                diffs.append(f"entry {i + 1} {w['en']!r}: {key} plan {w[key]!r} built {g[key]!r}")
+        for lang, v in (w.get("texts") or {"en-GB": w["en"]}).items():
+            if g["texts"].get(lang) != v:
+                diffs.append(f"entry {i + 1} {w['en']!r}: text {lang} plan {v!r} built {g['texts'].get(lang)!r}")
+        for lang, v in (w.get("states") or {}).items():
+            if g["states"].get(lang) != v:
+                diffs.append(f"entry {i + 1} {w['en']!r}: state texts {lang} plan {v!r} built {g['states'].get(lang)!r}")
+        if w["kind"] == "curve" and sorted(w["points"]) != sorted(g.get("points", [])):
+            diffs.append(f"curve {w['en']!r}: points plan {w['points']} built {g.get('points', [])}")
+    return diffs, notes
+
+
+def verify_webui(path):
+    """Dump-Web lines WEB|page|components|links and WL|page|link|registry id|object id|type: every page of the plan is
+    in the project with its components, and every link's registry id is the object's id now (the link resolves)."""
+    diffs, notes = [], []
+    pages, links = {}, {}
+    for line in open(path, encoding="utf-8-sig"):
+        f = line.rstrip("\r\n").split("|")
+        if f[0] == "WEB" and len(f) >= 4:
+            pages[f[1]] = (int(f[2]), int(f[3]))
+        elif f[0] == "WL" and len(f) >= 6:
+            links.setdefault(f[1], {})[f[2]] = (f[3], f[4], f[5])
+    want = (EXP.get("webui") or {}).get("pages") or []
+    ok = 0
+    for w in want:
+        n = w["name"]
+        if n not in pages:
+            diffs.append(f"page {n!r} missing")
+            continue
+        if pages[n][0] != w["components"]:
+            diffs.append(f"page {n!r}: components plan {w['components']} built {pages[n][0]}")
+        for l in w["links"]:
+            g = links.get(n, {}).get(l)
+            if not g:
+                diffs.append(f"page {n!r}: link {l} missing")
+            elif not g[0] or g[0] != g[1]:
+                diffs.append(f"page {n!r}: link {l} registry id {g[0]!r} but object id {g[1]!r}")
+            else:
+                ok += 1
+    notes.append(f"pages {len(want)} (language {(EXP.get('webui') or {}).get('language')}), links resolving {ok}/{sum(len(w['links']) for w in want)}")
+    # trends: TL|log|id|ref|interval|length|enabled|point on ; TG|group|axis|technicalName|log id|log ref now
+    tl, tg = {}, {}
+    for line in open(path, encoding="utf-8-sig"):
+        f = line.rstrip("\r\n").split("|")
+        if f[0] == "TL" and len(f) >= 8:
+            tl[f[3]] = f
+        elif f[0] == "TG" and len(f) >= 6:
+            tg.setdefault(f[1], []).append(f)
+    te = EXP.get("trends")
+    if te:
+        pts = []
+        for g in te["groups"]:
+            for ax in g["axes"]:
+                pts += [p for p in ax["points"] if p not in pts]
+        for p in pts:
+            r = tl.get(p)
+            if not r:
+                diffs.append(f"trend log for {p} missing")
+            elif (r[4], r[5], r[6], r[7]) != (str(te["interval"]), str(te["length"]), "True", "True"):
+                diffs.append(f"trend log {r[1]} for {p}: interval/length/enabled/point on {r[4:8]} (plan {te['interval']}/{te['length']}/True/True)")
+        for g in te["groups"]:
+            got = tg.get(g["name"])
+            if not got:
+                diffs.append(f"trend group {g['name']!r} missing")
+                continue
+            want_rows = [(ax["name"], p) for ax in g["axes"] for p in ax["points"]]
+            got_rows = [(x[2], x[3]) for x in got]
+            if want_rows != got_rows:
+                diffs.append(f"trend group {g['name']!r}: plan {want_rows} built {got_rows}")
+            for x in got:
+                if x[5] != x[3]:
+                    diffs.append(f"trend group {g['name']!r}: {x[3]} shows log {x[4]} which now logs {x[5]!r}")
+        notes.append(f"trends: {len(pts)} points logged ({te['interval']} s, {te['length']} samples), groups {len(te['groups'])}")
+    return diffs, notes
+
+
 def main():
     mode = sys.argv[1]
     if mode == "file":
@@ -339,6 +511,10 @@ def main():
         print(f"{sys.argv[2]}: " + ", ".join(f"{k} {a}/{b}" for k, (a, b) in counts.items()))
     elif mode == "device":
         diffs, notes = verify_device(sys.argv[2])
+    elif mode == "hmi":
+        diffs, notes = verify_hmi(sys.argv[2])
+    elif mode == "webui":
+        diffs, notes = verify_webui(sys.argv[2])
     else:
         diffs, table = verify_modbus(sys.argv[2], sys.argv[3])
         notes = table

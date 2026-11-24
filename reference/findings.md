@@ -41,6 +41,10 @@ Status words: **proven** = done in the tool, saved, reloaded, passed the tool's 
 
 ## Object model (namespaces abbreviated)
 
+The tool's classes carry BACnet names (`CBacnetSoftpointObject`, `CBacnetScheduleObject`, `PROPERTY_PRESENT_VALUE`,
+object type numbers). That is BA Tool's internal object model only: the Ouflex A does not offer BACnet (Modbus and its
+own web UI only, see "Protocols"). The names appear here because scripts call them.
+
 - Block instance: `CRuntimeComponent` (`VariableName`, `ComponentId`, `XCordinate`, `YCordinate`,
   `ExecutionOrder`) wrapping `CPrimitiveData`. Its `m_ObjectList` holds the pins.
 - Pin: `CBacnetSoftpointObject` (`VariableName`, `IoType` Input/Output, `ValueType` — `Enum` for
@@ -257,7 +261,7 @@ All run with `HNAME=<builder instance> hrun.sh`; helper names are from `win/prel
   PowerShell cannot touch a `DeviceProperties` object at all ("cancelButton differs only in letter casing from
   CancelButton"), so the dialog is driven from a small C# class (`Load-UiX`, `[UiX]::...`) by type and control name.
 - **First visit of the Devices page** starts `Ouman6000` and raises a Windows Firewall prompt; Cancel is fine.
-- **Physical point polarity** is the BACnet `Polarity` property (`Normal` = "Closing (NO)", `Reverse` = "Opening (NC)",
+- **Physical point polarity** is the point's `Polarity` property (BACnet-style name in the tool's object model) (`Normal` = "Closing (NO)", `Reverse` = "Opening (NC)",
   i.e. Reverse inverts the present value). A plan that inverts NC contacts in logic leaves all points Normal.
 - **Modbus slave map** (proven by IL): every point is a Holding register; the string "Holding" is hard-coded in every
   `CDescriptionFileCreator` writer and `CMobusInterface` has no register-type field. Per point: `ModbusRegister`
@@ -382,6 +386,363 @@ position of a pin: element `DeviceBounds` centre → `$cv.PointToScreen(...)`.
 - In-session data after scripted edits is not identical to what reload rebuilds (MPLEX, ParentObject);
   always round-trip before trusting the data side.
 
+## Protocols
+
+- Ouflex speaks **Modbus** (TCP slave, RTU bus) only. **No MQTT, no BACnet** (2026-11-24). The `CBacnet...`
+  class names (`CBacnetSoftpointObject`, `CBacnetEthernetPortConfig`, `Polarity`) are the tool's internal object
+  model, not a BACnet interface on the controller. Data to an HMI/SCADA goes over Modbus TCP.
+
+## Simulation without a controller (works, 2026-11-24)
+
+BA Tool ships a simulator: `ApplicationDebugger.exe` (Application Builder > Tools > Debug starts it as
+`ApplicationDebugger.exe "<app.ouear>" lang=..`) loads **one application** into a virtual device and shows live
+values on the function-block canvas. The toolbar button "Debug" in Application Builder is something else: a
+trace-log viewer (`TraceDebug`).
+
+- Device types in the debugger (`deviceTypeComboBox`, hidden): Virtual Ouflex C (default) / Virtual Ouflex A.
+  Load starts `Template\OuflexCVirtual\VirtualOuflexC.exe devicetype=0 onlyui disable_exit`, a window "Virtual
+  device" with the Ouflex C panel (display + UP/OK/Down/ESC: the local HMI, Finnish menus), talking over the named
+  pipe `OuflexCVirtualDevicePipe`. `Template\OuflexAVirtual\platform\exe\OuflexA.exe` exists too (not tried).
+  `OuFlex_C_VirtualUI\Ouflex C.exe` started alone exits at once.
+- Host it like the other tools: `hstart.sh dbg ApplicationDebugger.exe '<app.ouear>' lang=en-GB`. Form
+  `ApplicationDebugger.DebuggerForm`; helpers `Sim-*` in `win/prelude.ps1`.
+- **Load** = `loadButton_Click` (log "Starting the virtual device / Loading complete!"). **Run** = `runButton_Click`
+  (toggle: Run/Stop; `m_ProgramState` IDLE/LOADING/RUNNING/WAITING/HALTED/UNLOADING). **Reset** =
+  `resetButton_Click` = `Ou6000Connection.RestoreDefaultValues`: values back to defaults and the program
+  **HALTED**: Run again before writing inputs (a write right after Reset was lost). Step/breakpoints exist.
+- **Read**: `m_LoadedApplication.m_ObjectList` holds every point of the application (interface pins
+  `CBacnetSoftpointObject` with `IoType` Input/Output, set values `CAnalogSetpointObject`/`CBinarySetpointObject`,
+  measurements `CAnalog/BinaryMeasureObject`); `PresentValue` (string, `,` decimal on a fi-FI Windows) is live, polled
+  from the virtual device. Block pins: `m_Components[i].m_ComponentData.m_ObjectList`.
+- **Write** (inputs and set values): what the canvas "Set value" dialog (double-click a value box) ends in:
+  `DebuggerForm.myCanvas1_OnObjectValueChanged(<point object>, 'PresentValue', '<value>')` → `set_PresentValue` +
+  `CDeviceConnection.WriteProperty`. Pass the bare object (`.psobject.BaseObject`), else nothing happens and no
+  error. Setting `PresentValue` directly only changes the local copy (the next poll overwrites it). `12.5` with a
+  dot is accepted.
+- **Time**: combo "Timer factor" (0.2…10 offered) → `Ou6000Connection.ChangeTickTimerSpeed(Single.TryParse(text))`;
+  **100 works** (a 3600 s OnDelay fired after 36 s wall clock). Each driver call is ~3 s = 300 s simulated at 100.
+- Proven on dh2 `C1`: curve −20/0/+20 → 58/41/20, 12.5 °C → 27.875; summer stop after `C1_SUM_DLY`, pump and
+  valve to 0; PID valve 100 % at supply 0 / setpoint 41.
+- **Scenario runner**: `pipeline/sim_test.py <app.ouear (Windows path)> <scenario.json> [--factor] [--attach]`, scenario
+  format (set / wait / expect / until / note), Reset+Run per case. Example `pipeline/examples/dh2/sim-C1.json`.
+- **Reset is asynchronous**: the state reads RUNNING for a moment, then HALTED. `Sim-Reset` waits for
+  HALTED, `Sim-Run` presses Run only when not RUNNING and waits for RUNNING. Without that a scenario ran on a
+  halted program and "passed" on stale values. Reset restores written set values to their defaults.
+- **Out-of-range write is clamped** to the set value's limit (simulator): `C1_EXER_OFF` (min 3600) written 600
+  reads back 3600. The real controller is not checked.
+- **Call overhead is simulated time**: at factor 100 each ~3 s driver call is ~5 min. After Reset the inputs are 0,
+  so a delay that 0 already triggers (deviation 0 vs setpoint 41) starts at Run, before the first write: start a
+  case from a quiet state, then step.
+- **Factor after a reload**: a (re)load starts the virtual device at factor 1, and the combo passes the speed on only
+  when its text changes, so setting "100" again did nothing (all delay cases failed after a `Sim-Week` reload).
+  `Sim-Factor` now sets another value first.
+- **Short pulses fall between polls**: at factor 100 one ~3 s read is ~5 min simulated, so a 120 s exercise pulse
+  can pass unseen; the scenario uses a 900 s pulse.
+- dh2 C1 scenario `pipeline/examples/dh2/sim-C1.json`: 9 cases (curve/offset/limits, summer stop with latch, sensor
+  fault, disable, deviation alarm, pump exercise, clamp, night setback, comfort), RESULT OK in ~8 min wall clock
+  (2026-11-24, log `build/out/sim-C1.txt`).
+- Not yet: device level (several applications, physical I/O, Modbus), the Virtual Ouflex A, the virtual panel
+  driven by script.
+
+## Web UI pages (proven 2026-11-24)
+
+The Web UI runs on the controller itself. Its pages ("charts") are built on ProjectManager's "Web UI configuration" page
+(`OuFlexConfiguratorPlugins.Chart.ChartEditor`).
+
+- **Editor**:
+  - It is the controller's own web UI, run by the virtual Ouflex A (`Template\OuflexAVirtual`, process
+    `OuflexA.exe`, its own web server on port 8080) inside an EO WebControl.
+  - Pages sync between the project and that device through `OumanAPI` (`GetCharts`, `GetChart`, `SaveChart`,
+    `RemoveChart`, `RenameChart`).
+  - "Preview" (`toolStripButtonPreview_Click`) opens `…?fullscreen=1/#/charts` in a `PreviewForm`. The virtual
+    device runs the project's program, so the preview shows live values (dh2: setpoints 41 / 28 °C, pumps on,
+    valves 100 %).
+  - Only one editor may run (one `OuflexA.exe`).
+- **Storage**: `COuman6000.ChartData` is a `Dictionary<string,string>`, page name → page JSON. It is null in a
+  project that has no pages yet. "Add chart from library" = `File.ReadAllText(Template\Cloud\Charts\*.json)` →
+  `AddChart(name, json, invokeChanged)` → `SaveCharts` → `UpdateChartToTabs`. Library pages: `AHU301`,
+  `Heat distribution`.
+- **Page JSON**:
+  - `surface` (size, grid, background).
+  - `component.components`: id → `{id, type, props, links, states}`. Types seen: Pipe, Pipe T-joint, Triangle,
+    Heat exchanger, Two way valve, Three way valve, Pump, Speed controlled pump, Pressure tank, Circuit,
+    Heating curve, Measurement, Setting, Adjust, Control, Indication, Alarm, Setting icon, Text, Outdoor wall,
+    Damper, Filter, Radiator, Time program, Rect.
+  - `link`: the registry.
+  - `extraData`.
+- **Links**: physical points by object name (`UI 4`, `AO 1`, `R1`); application points as `<app>.<point>`
+  (`C1.C1_SP`). A component lists them in `links`, and `states` maps roles (`displayValue`, `alarm`,
+  `indication`). The heating curve takes `supplyN`/`outsideN` (a fixed outside value is written as a number),
+  `pointCount`, `min`, `max`, `parallelShift`, `currentOutside` and `currentSupply`. The setting icon is a list
+  of set values the user can edit.
+- **The registry is required**: with an empty `link.links` the boxes stay blank. Each entry is `{type
+  (PhysicalPoint/Setvalue/Measure), objectType (BACnet type number), id (object identifier), pId 85, deviceId
+  255, pointId (<name>.M/.SP/.C/.S/.I), technicalName, uId, displayName, allowManualControl}`. The ids are
+  the project objects' `ObjectIdentifier` (they match the web UI's `HIERARGY.ZIP`), so `WEBP` fills the
+  registry from the project at build time and a page file needs links only.
+- **Languages**:
+  - Point names, units and state texts on a page come from the device in the user's language. Proven in
+    Finnish: the setting-icon popup lists "Lämmityspiiri 1 kesäkatkaisuraja" etc. and "Päällä" in the enum
+    dropdown.
+  - The device hierarchy (`HIERARGY.ZIP`) carries all 15 languages of every point.
+  - A `Text` component and the page name hold one string, so the generator picks `program.json`
+    `webui.language`.
+- **PowerShell + Newtonsoft**:
+  - Assigning a string to a JObject index goes through `JToken.Parse` (use `JValue.CreateString`).
+  - A function returning a JToken must return `,$x`, or PowerShell unrolls it to nothing.
+  - Newtonsoft is loaded only once the Web UI page was opened: `Web-Json` loads it from the tool folder.
+- **Build** (proven on dh2):
+  - `program.json` `"webui": {"language", "pages": [{"name": {en, fi, sv}, "file"}]}`. The page file is
+    written by `make_webui.py`.
+  - The generator localises texts, checks every link against the plan and writes `web_set.ps1`.
+  - `build.sh` stage `webui` runs `WEBP`, saves and reopens, then `Dump-Web` and
+    `verify_ouflex_build.py webui`.
+  - dh2 page "Lämmitys": 48 components, 53 links, all resolving after reopen.
+- **Drawing conventions** (from the vendor library and the editor code, `charteditor/static/js/main.*.js`):
+  - A pump drawn at rotation 0 points right. On a circuit's return leg the vendor uses `rotation: "180"` (flow
+    back to the heat exchanger).
+  - Pipe colour presets: red `#ff2424` (supply), blue `#24B4FF` (return), light blue `#9DCEDA`, grey,
+    orange `#FFBC24`. A loop is two pipes, supply and return, split at the consumer.
+  - A Pipe is one polyline: **one point per corner**, and the editor draws the bend. A user adds points by
+    right-clicking the pipe and drags them. Do not approximate curves with many points: the bend gets baked in
+    and the pipe becomes a pain to edit (tried, reverted).
+  - The local editor has no bend component (only Pipe, T-joint, X-joint) and no gradients. Gradients
+    exist only in the online OuNet builder. The heat exchanger's red-to-white gradient is fixed.
+  - Tee joints sat slightly off on our mains. Branches that start on the main's centre line, with the last
+    branch drawn as the main's own bend, look cleaner.
+- Time program component: see "Time programs". Not yet: several pages with navigation between them (`internalLink`).
+
+## Trends (proven 2026-11-24)
+
+- **Trend logs**: a device has 200 trend log objects (`CTrendObject` `Trend_1`..`Trend_200`, BACnet ids from 102).
+  `CTrendConfigObject`: `MaxTrendPoints` 200, `LogMaxCapasity` 17500000. A new project preassigns 34 of them to
+  the physical points (UI 1..16, DI, AO, R, TR ...) at 60 s and 10000 samples; physical points also default to
+  `TrendOn` with group "Inputs" (Process monitoring). Application points default to `TrendLogEnabled` False.
+- **A log is in use** (`IsFree` False) when its `m_TrendRefObjectVariableName` resolves through
+  `ProjectApp.GetObjectByFullName` and that point has `TrendLogEnabled`. Otherwise `IsFree` clears the reference.
+  The reference is the point's `FullVariableName`: `C1.C1_SP` for an application point, the object name (`UI 4`)
+  for a physical one. Settings on the log: `m_TrendSampleInterval` (s, UInt16), `m_TrendLogBufferSize` (samples),
+  `m_TrendLogEnabled`, `m_TrendProperty` (PRESENT_VALUE). The same fields exist on the point.
+- **Groups** (what the web UI's trend view shows) are `ChartData["OumanTrend"]`, a JSON array of
+  `{uid, name, data: [{id: <log id>, name, color, technicalName, pointId}], graphs: [{type: "line",
+  data: [<log ids>], yAxis: {id, name, position left|right, offset 0|50, min, max}, enabled}]}`. That is one
+  graph per y axis, at most 30 points per group. Format from the device web app (`www/js/bundle-min.js`:
+  `createGroup`, `pointsDropped`, `saveTrendConfiguration`). The trend editor in the web UI writes the logs to the
+  device (`Logenable`, `Interval`, `Loglength`, `Refobj`, `Refprop`, `Refdev`). The tool then reads the device
+  back into the project (`GetTrendObjects`: `config.cfg` + `object_values.bin`, `ReadAllSettingsOffline`).
+- **Helpers**:
+  - `TRD <point> <interval> <length>` takes the point's log or a free one, enables trending on the point and
+    sets both sides.
+  - `TGRP <name> @(@{name=<axis>; points=@(...)}, ...)` replaces a group by name.
+  - `Dump-Trend` prints `TL|log|id|ref|interval|length|enabled|point on` and
+    `TG|group|axis|point|log id|log ref now`.
+- **Build**:
+  - `program.json` `"trends": {interval, length, groups: [{name: {en,fi,sv}, axes: [{name, points}]}]}`.
+  - Generated into `web_set.ps1`; stage `webui`; `verify_ouflex_build.py webui` checks the logs and groups
+    after save and reopen.
+  - dh2: 14 points logged (9 new logs; UI 1..5 had theirs), groups "Lämmityspiiri 1/2" (°C, %, on/off axes)
+    and "Kaukolämpö". OK, and the saved-file check stays OK.
+  - The device's trend editor (Finnish UI) lists the group with its points by their Finnish names, "163/200
+    linkable points left".
+- **Curves not seen**: the virtual Ouflex A shows the groups but never delivers trend history (the chart spins
+  even after minutes of logging at 60 s and a refresh). The configuration is proven; the curves need a real
+  controller.
+- **Virtual device in use**: killing ProjectManager (hstart restart) leaves `OuflexA.exe` running. The next Web
+  UI page then says "Virtual device is already in use" (modal). Kill `OuflexA.exe` first.
+
+## Time programs (proven 2026-11-24)
+
+A time program (schedule) is no block: it is an object the tool attaches to a block's Enum **input pin** (pin menu
+"Add time program", the pin shows a clock). Blocks only consume a state (`TimeProgPredictBin/An` pre-heat, `WeekDayDetect`,
+`DateTime`).
+
+- **Model**:
+  - `CBacnetScheduleObject` (the tool's class names follow a BACnet-style object model throughout; the Ouflex A itself
+    offers Modbus and its web UI, not BACnet): `m_TimeProgramType` (`ETimeprogramType` On_Off / Max_Half_Min / Value),
+    `m_DefaultValue` (a **string**), `m_States` (`CEnumItem` list, texts copied from the pin's enums, e.g. "Input0/Input1"
+    on `SwitchAn.Select`), `m_WeeklySchedule` (`CWeeklySchedule.m_WeeklySchedule` = 7 `CDailySchedule`, index 0 =
+    **Monday**, proven in the simulator), `m_ExceptionSchedule`, `m_ReferenceObjects`. `ObjectType` OBJECT_SCHEDULE (17).
+  - Entry: `DP_TimeValue(OUFLEX_Time(byte h, m, s, hundredths), DPValue(EValueType, Int16 0, Byte 0, value))` in
+    `CDailySchedule.m_TimeValues`. On/Off: `EValueType.Enum` (29) + UInt32 (read back `U32Value`); Value: `Float` (8) +
+    Single (`FloatValue`). Types in assembly `BacnetObjectClasses` (`...PropertyStructs`, `...TimeProgramObjects`).
+- **Handler** (`MyCanvas.addTimeprogramToolStripMenuItem_Click`): with no compatible program it calls
+  `CBaseContainerData.AddTimeProgram(pin.DataObject)`. That needs IoType Input and no reference, adds the object, sets
+  `pin.ReferenceObject`, `IsRefPropMainOwner` and `State` Active, and copies enums. Then the handler sets `PositionInUse`
+  and `PositionTable` (a clone of the pin's), and pin `PositionCopied`. It sets `TimeSymbol.ShowSymbol` through the
+  recorder and `TimeSymbol.DataObject` = the program, calls `syncronizeDiagram_Data`, and opens the modal property grid.
+  With compatible programs it first shows the modal `AddSymbol` (reuse one).
+- **Why the earlier attempt was not saved**: the static `MyCanvas.syncronizeDiagram_Data(data, elements, host, ref, ref)`
+  removes every object of four categories (loop at IL 0x0BC5) unless `DontSyncronizeInDiagram` is set or
+  `MyCanvas.GetSymbol(obj, elements)` finds it. `GetSymbol` searches **only `ComponentSymbol` pins** (block pins:
+  SetPoint/ConnectPoint/Time/Measure symbols of inputs, Measure/ConnectPoint of outputs) plus alarm symbols of physical
+  inputs. A program on an application interface pin (`EditorInputPin`) is never found, so the next sync (any `K`) drops
+  it. **Put it on a block input**: then it survives every sync, the save and a restart (probe `TP3.ouear`: week, name,
+  states, clock symbol, CheckAll True).
+- **Helper** `TPRG $cv 'blk.pin' NAME default @(7 days) display @(off,on texts) [On_Off|Value]` does what the handler does
+  without its dialogs and is idempotent (a rerun rewrites name, type, default, texts and week). A day is
+  `'HH:MM=v,HH:MM=v'` (Monday first). `Dump-App` prints `TPP|blk.pin|name|sym=True`,
+  `TP|name|type|default|week|en`, `TX|...` and `TS|name|off langs|on langs`; `projdump.ps1` prints `FTPP`/`FTP`.
+- **Give 00:00 explicitly**: between midnight and the day's first entry a BACnet-style schedule uses the default value (not
+  checked on the device), so the dh2 week is `00:00=0,06:00=1,22:00=0` with default 1.
+- **Simulator** (virtual Ouflex C, `ApplicationDebugger`):
+  - The program runs on the Windows machine's **local** clock and weekday (a Tuesday-only program was 1 on a Tuesday; 17:45 UTC =
+    19:45 local was already past).
+  - It is evaluated **only when the program starts** (Load or Reset): a switch time passed while running (factor 1 for
+    4 min, factor 100) changed nothing; Reset then gave the new value.
+  - Writing the program's value (`Sim-Set`) is not taken.
+  - So scenarios set the state by rewriting the week in the debugger's loaded application and loading again: `Sim-Week`,
+    scenario step `{"week": {"C1_TPRG": "on"|"off"|[7 days]}}`.
+  - Switching at the programmed times is not tested on a real controller.
+- **Web UI**: component `{"type": "Time program", "props": {x, y, internalLink, rotation, size: "60", color: "#57564a"},
+  "links": ["<app>.<program>"]}` (vendor page AHU301). Registry entry `type "Timeprogram"`, `objectType` 17, pointId
+  `<name>.TP` (the vendor uses position ids `301.SC08.TP1`), `allowManualControl` false; `WEBP`/`Web-Entry` write it.
+- **Build**: plan source `tprg(NAME, default, week, display, states)` (`oufplan.py`, Enum pin checked by `check_plan.py`).
+  `make_ouflex_build.py` writes `TPRG` after every constant and set value. State texts come from texts.json `states`
+  (applied by `TPRG`, not by the device-level `HST`). The verifier checks the pin, type, default, week and states in
+  every language, and the saved file again.
+- **Display menu**: the application's generated menu has a row per time program, so `HD <folder> <app> <NAME>`
+  drops it like any point (dh2: "Time program" under each circuit, read back after reopen). How the row edits the
+  week on the display was not looked at.
+- **Modbus**: the tool gives each time program its own Holding block, outside the plan's registers. Document numbers
+  for dh2 C1 (C2 = +362): 10001 current value (R), 10002 manual control (RW, −1 = automatic, 0/1 = state),
+  10003 weekly program, 10123 exception calendar and 10243 special days (120 registers each). Not decoded or
+  written.
+- **dh2** (2026-11-24): `C1_TPRG`/`C2_TPRG` on `nsb.Select`, setback set values `Cn_SETBACK`. Built from nothing with
+  every stage OK (apps incl. programs, device, Modbus, HMI 62 entries, Web UI links 362/363 `Timeprogram`, saved-file
+  check). Simulator cases "3.8" (setback 41 → 31 °C, offset before, stop at TS_MIN; comfort no setback) pass.
+
+## Languages, Modbus export without a dialog, GUI keystrokes (proven 2026-11-24)
+
+- **Translations end to end** (dh2, en/fi/sv):
+  - Point names (set values, measurements, physical I/O), state texts and the display menu are written with
+    `Set-ML`: English into all 15 languages, then each translation over it.
+  - Read back per language (`TX`/`ST` lines, `Dump-Hmi`) and checked: apps 72 + 72 + 3, device 30, HMI 58
+    entries + 14 state texts, all OK.
+  - Document language sv-SE turns the virtual display Swedish, system menus included ("Systeminställningar",
+    "Språk/ Language" row, Swedish state texts).
+- A display name's `ToString()` follows the **document language** (ProjectManager in fi-FI gave Finnish I/O
+  names), so dumps print `ML-En` (en-GB) where English is compared.
+- **Modbus document without the Save As dialog**: the menu handler (`DeviceConnectionTool.createModbusInterfaceHtml`)
+  takes the `CDescriptionFileCreator` from `m_CurrentDevice.OnlineConnection.DeviceDataConverters`, sets its
+  `OuFlexDevice` and calls `createModbusInterfaceHtml(file, true)`. The dialog only supplies the path.
+  `Export-ModbusHtml <path>` does that; `build.sh` uses it.
+- **Do not type into dialogs by SendKeys.** What went wrong:
+  - The clicked Save As layout changed between runs.
+  - A leftover always-on-top "Virtual device" window (VirtualOuflexC, which outlives ApplicationDebugger) took
+    the keys.
+  - `SetForegroundWindow` reported success but Windows' foreground lock kept another window in front.
+  - A late dialog let the keys reach Explorer, which then browsed folders on its own. Nothing was changed, but
+    Enter in Explorer opens items.
+
+  Prefer calling the code behind a dialog. The GUI runner now has `focuswin <title>` (FindWindow; pass
+  `[NullString]::Value`, since PowerShell turns `$null` into `""`), and it skips `keys`/`text` when the window
+  is not found.
+- Each posted `Start-ModbusExport` queues its own Save As. Failed runs leave dialogs waiting; cancel them
+  (`focuswin Save As` + ESC) before retrying.
+
+## Licence (trial) check
+
+- BA Tool licensing is TurboActivate (`OuFlex.Common.Helpers.CCommonHelpers.m_activate`). Unlicensed it runs a
+  14-day trial. **Test**: when Application Builder opens an application in the function-block canvas, the trial is
+  still on; once it ends the editor drops to a table view ("lite" mode). Read-only status from `hrun`:
+  `CCommonHelpers.IsActivated($false)` / `IsTrial($false)` (2026-11-24 on the tool machine: False / True, canvas shown,
+  dh2 apps built, saved and verified OK). Never call `UseTrial`/`ExtendTrial`/`Activate`, never patch the checks:
+  a licence key or trial extension comes from Ouman.
+- Application Builder toolbar has **HMI configurator**, **Import container from file**, **Object editor**.
+  The HMI configurator is covered in "Local HMI" below.
+
+## Local HMI (row display) menu (proven 2026-11-24)
+
+Ouflex has two user interfaces: the **local row-based display** (the panel the simulator shows, menus of rows)
+and the **Web UI**. This section is the local one; the Web UI is the ProjectManager page "Web UI configuration"
+(`ChartEditor`: graphic pages "Add new chart / Add chart from library / Preview", plus a "Trend configuration"
+tab), not worked out yet.
+
+- **Two menu trees**. Every application carries an **automatically generated** menu
+  (`CApplicationData.m_Menu`, `m_NoGenerateUI` False). The generator groups rows into Inputs ("Tulot"), Outputs
+  ("Lähdöt", with ANALOGISET/DIGITAALISET header rows), Curves ("Säätökäyrät", one `CurveView` per Curve block with
+  its 5 points), Set values ("Asetusarvot") and Software measurements ("Ohjelmalliset mittaukset"). Row text =
+  the point's display name. The **device menu** (what the controller shows) is
+  `CommonUIConfig.m_LocalMenu` on ProjectManager page 1 ("Local HMI / SMS"). It starts with the protected
+  System settings (time, network, Modbus, serial ports, display, backup ...), Alarms and Point info submenus.
+  **Nothing from the applications is in it until it is dragged there**: a freshly built project shows no
+  application rows on the controller.
+- Application Builder's HMI configurator (`toolStripButtonUIConfig_Click` → modal `UIConfigForm(app, null)`)
+  shows only that application's generated tree; its device pane is empty. Build the device menu in
+  ProjectManager.
+- **Model**: `CSVObject` (a menu, itself a `CBaseBacnetObject`) holds `m_SubOrdinateList` of `CDisplayItem`
+  rows. A submenu row's `ObjectPropertyRef.BacnetObject` is the child `CSVObject`. A value row's
+  `ObjectPropertyRef` points to a point plus a property (`PROPERTY_PRESENT_VALUE`). Row fields: `m_DisplayName`
+  (empty = the point's name), `m_Hidden`, `m_Protected`, `m_VisibleLevel`/`m_AccessRightLevel` (3/5 by default),
+  visibility rules, prefix/suffix, `m_MenuType` (Submenu, CurveView ...).
+- **Drag and drop** (the GUI way, "drag and drop from the program menu", folders and submenus can be made):
+  the drop handler ends in `CommonUIConfig.HandleDropFromGeneratedUi(srcNode, toNodes, targetMenu, copy=true)`.
+  It **deep-copies** the row or the whole submenu (a dropped folder keeps its children). The copy does not follow
+  later changes in the application: drop again or use "Update object".
+- **New folder** = what "Add submenu" does without its name dialog: new `CDisplayItem`
+  (`AllowUserAddRemoveSubMenus`, `Protected` False), `ObjectPropertyRef.BacnetObject` = new `CSVObject`,
+  `parent.CreateMenuItem(item)`, then the text. The main level takes at most **15** entries ("UI main level
+  full!", `count < 15` in the IL), the 3 system menus included.
+- **Texts and languages**:
+  - Every text is a `CMultilangString` holding all **15 languages** (en-GB, fi-FI, sv-SE, et-EE, ru-RU, lv-LV,
+    tr-TR, pl-PL, lt-LT, da-DK, fr-FR, de-DE, no-NO, cs-CZ, nl-NL). `SetTextToAllLang`, `SetString(text, lang)`.
+  - A row shows the point's display name (`DisplayNameConfig` ObjectName) unless it is set to **OwnName** with
+    its own `DisplayName`.
+  - The display follows the project's **document language** (ProjectManager toolbar combo
+    `comboBoxDocumentLanguage`, fi-FI in the base project). Proven: switched to en-GB, the virtual display shows
+    "System settings", our English rows and states, plus a "Language: English/English" row. On fi-FI the
+    "Kieli/ Language" row is hidden. The controller's own language is the device property `USER_LANGUAGE`.
+  - The generated group names (Tulot, Asetusarvot ...) and the system menus come in the document language.
+- **State texts** of binary points (`CBinarySetpointObject` / `CBinaryMeasureObject`): `m_InactiveText` and
+  `m_ActiveText`, multilingual. Measurements default to Off/On in every language. A binary set value on a
+  switch's Select pin got the **pin names "Input0/Input1"** (dh2 `C1_ENABLE` showed "Input1"). They are set on
+  the point object, so the Web UI gets them too.
+- **Curves**: a Curve_3p or **Curve_5p** block becomes a `CurveView` row. The display shows it as a table plus a
+  graph (−20 = 58, 0 = 41, +20 = 20, min, max) and the points are editable there. Curve_5p, probed in an
+  application: the view holds all 10 set values (Out1..Out5, the movable breakpoints In2..In4, Min, Max). Its
+  look on the display has not been seen yet.
+- **Helpers** (`win/prelude.ps1`, project open in `pm`). Paths name menus by their text in **any** language
+  (`'Heating circuit 1/Settings'`, `''` = main level). Source rows are found by **point name** or curve block
+  name under the application, so nothing depends on the document language. All are idempotent and count
+  add/skip/fail like the build helpers.
+  - `HF <parent> <en> [fi]` makes a folder.
+  - `HD <parent> <app> <point|curve> [en] [fi]` drops a generated row and gives it its own text.
+  - `HST <app> <point> <off en> <on en> [off fi] [on fi]` sets the state texts.
+  - `Hmi-Remove <path>`.
+  - `Dump-Hmi` prints `HMI|depth|kind|object|en|fi|states`.
+  - en goes to every language and fi overrides fi-FI.
+  - Generated scripts must carry a UTF-8 BOM (`write_bom`), or PowerShell 5.1 reads ä/ö as ANSI.
+- **Build pipeline** (proven 2026-11-24 on dh2):
+  - `program.json` `"hmi": {"menu": [...], "states": {...}}` → `make_ouflex_build.py` writes `hmi_set.ps1`
+    and `expected.json` `hmi`.
+  - `build.sh` stage `hmi` (after `modbus`) restarts `pm` (so no hidden "save changes?" prompt from another
+    project), opens the build project, runs the script, saves, reopens and dumps.
+  - Then `verify_ouflex_build.py hmi` checks order, depth, objects, texts, state texts and curve points.
+  - dh2: 58 entries plus 14 state texts, RESULT OK. A rerun skips all 58.
+- **Quirks**:
+  - In the hosted ProjectManager the device tree `multitreeLocalUi` was found detached from its panel
+    (`splitContainer4.Panel1` empty, middle pane blank). `Hmi-Ui` puts it back; it is display only.
+  - Use `.psobject.BaseObject` for reflection arguments. PowerShell unrolls a `TreeNodeCollection` passed in
+    an argument list, so build the `object[]` by hand.
+  - Reopening the open project raises a modal "already open": open another project first.
+- **Virtual display**: the "Start virtual display" button (`startVirtualUIButton_Click`) runs
+  `OuFlex_C_VirtualUI\Ouman6000.exe` ("Virtual HMI" window) with the device menu. It opens at System settings.
+  Calling `updateSelectedNodeToVirtualUI(node, false)` did not move it.
+  - **Keys** (proven): focus the window by clicking its title bar, then send keys (`gui.sh 'keys {DOWN}'`).
+    At the main level, Down/Up moves between the main menus (the icons on the left). Enter opens the menu or
+    row (Right also opens a row). Down/Up moves the row cursor, ESC goes back.
+  - **Never click inside the display**: a click is OK on that row and can open a value editor. Leaving the
+    editor needs a long ESC, which SendKeys cannot do. Restart the preview instead (kill
+    `m_VirtualOuman6000`, then press the button again); nothing is written.
+  - Shown on the dh2 copy: "Heating circuit 1" with its rows (0.0 values: the preview is not connected to a
+    running program); Settings > Asetusarvot with defaults and units (40.0 °C, 60 s, 18.0 °C, 3600 s); the curve
+    view as a table (−20 = 58, 0 = 41, +20 = 20, min 18, max 70) plus a graph.
+  - `MoveWindow` coordinates are scaled about 1.12 against screenshot pixels (display scaling).
+- ProjectManager pages, as `m_ConfigForms` entries: Applications (`ApplicationManager`), Local HMI
+  (`UIConfigurator`), Object editor, Alarm routing (`Users`), System settings, Devices, Web UI configuration
+  (`ChartEditor`, `Show-Page 6`), Wiring diagram, then `ApplicationConfigurator`, `HierargyEditor` and
+  `ProcessViewer` (Process monitoring, Device connection; mapping not checked).
+
 ## Still to work out
 
 Alarms (`AddAlarmPoint`, "Add alarm" on points/outputs, sensor fault alarm); global points across two
@@ -389,7 +750,7 @@ applications on the device canvas; local/remote pattern (SetPointSync /
 StateSync) and how vendor library apps attach set values; offline simulation (`ApplicationDebugger.exe`,
 `OuFlex_C_VirtualUI\Ouflex C.exe` exist, `VirtualDevice` is empty; not tried). Also open (2026-11-10 night): constants and
 wires on U32 pins (Pid PreviousStage/NextStgS chain, untested; both examples leave them untouched and CheckAll accepts it);
-alarm blocks (AnalogAlarm/BinaryAlarm/DeviationAlarm, they create alarm objects); time programs; creating a project with
+alarm blocks (AnalogAlarm/BinaryAlarm/DeviationAlarm, they create alarm objects); exception days of time programs; creating a project with
 New project by code (only read from IL); no MotorExercise block exists in the 2.130.14 library catalogue.
 
 ### Real controller: read, load, force (seen 2026-11-11 and 2026-11-12 on one Ouflex A on a test table)

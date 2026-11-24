@@ -3,7 +3,7 @@
 
 A program generator (examples/<name>/make_plan.py) builds the plan with this API and writes plan.json:
 
-    from oufplan import Plan, wire, const, setv, net, io, measure
+    from oufplan import Plan, wire, const, setv, tprg, net, io, measure
     P = Plan("dh2", title="District heating substation, two heating circuits")
     P.io("UI 1", "TOUT", "in", "NTC", "Outdoor temperature")
     a = P.app("C1", "Heating circuit 1")
@@ -19,6 +19,8 @@ Pin sources (one per input pin; pins not given are left untouched):
     setv(NAME, default, min, max, unit, display, decimals=None)  named set value; setv(NAME) again on another pin = fan-out
     net(NAME)        signal written by another application (device-level wire between applications)
     io("UI 3")       physical input point
+    tprg(NAME, default, week, display, states)  time program (schedule) on an Enum block input; week = 7 day strings
+                     Monday..Sunday, 'HH:MM=v,HH:MM=v'; give 00:00 explicitly (before the first entry the default applies)
 Output targets: measure(...), net(NAME), io("AO 1").
 
 Execution order = declaration order inside an application; a wire from a block declared later is flagged
@@ -68,6 +70,23 @@ def setv(name, default=None, min=None, max=None, unit="", display="", decimals=N
     if default is not None:
         d["_def"] = {"default": default, "min": min, "max": max, "unit": unit, "display": display, "decimals": decimals, "why": why, "local": local}
     return d
+
+
+def week(days, *, weekend=None):
+    """7 day strings Monday..Sunday from one weekday string (and an optional weekend string)."""
+    return [days] * 5 + [weekend if weekend is not None else days] * 2
+
+
+def tprg(name, default, week, display="", states=None, why="", kind="On_Off"):
+    if len(week) != 7:
+        raise ValueError(f"time program {name}: week needs 7 days (Monday..Sunday)")
+    for d in week:
+        for e in filter(None, d.split(",")):
+            t, v = e.split("=")
+            h, m = (int(x) for x in t.split(":"))
+            if not (0 <= h < 24 and 0 <= m < 60):
+                raise ValueError(f"time program {name}: bad time {t}")
+    return {"tprg": name, "_def": {"default": default, "week": list(week), "display": display, "states": states, "why": why, "type": kind}}
 
 
 def measure(name, unit="", decimals=None, display="", why=""):
@@ -153,7 +172,7 @@ class Plan:
 
     # ------------------------------------------------------------------ assemble
     def build(self):
-        setvalues, measures, nets = OrderedDict(), OrderedDict(), OrderedDict()
+        setvalues, measures, nets, tprgs = OrderedDict(), OrderedDict(), OrderedDict(), OrderedDict()
         sv_off = m3 = m1 = 0
         used_by, driven_by = defaultdict(list), defaultdict(list)
         apps_out = []
@@ -189,6 +208,16 @@ class Plan:
                         elif n not in setvalues:
                             raise ValueError(f"{ref}: set value {n} used before it is defined")
                         setvalues[n]["pins"].append(f"{a.name}/{b.id}.{pn}")
+                    elif "tprg" in s:
+                        n = s["tprg"]
+                        ptype = next(p["type"] for p in CURRENT[b.type]["pins"] if p["name"] == pn)
+                        if ptype != "Enum" and s["_def"]["type"] == "On_Off":
+                            raise ValueError(f"{ref}: an On/Off time program needs an Enum pin, {pn} is {ptype}")
+                        if n in tprgs or n in setvalues:
+                            raise ValueError(f"time program {n} defined twice")
+                        dd = s.pop("_def")
+                        tprgs[n] = OrderedDict(name=n, display=dd["display"], type=dd["type"], default=dd["default"], week=dd["week"],
+                                               states=dd["states"], pin=ref, why=dd["why"])
                     elif "io" in s:
                         used_by[s["io"]].append(ref)
                 for pn, outs in b.d["out"].items():
@@ -252,11 +281,11 @@ class Plan:
         return OrderedDict(
             format="ouflex-plan", version=2, generated_by=self.generator, program=self.name, title=self.title,
             block_reference="Ouman Ouflex BA Tool 2.130.14 (blocks.json)", target=self.target,
-            legend={"pins": "{wire: 'blk.pin'} | {const: v} | {setvalue: NAME} | {net: NAME} | {io: 'UI 3'}; feedback: true = one cycle old",
+            legend={"pins": "{wire: 'blk.pin'} | {const: v} | {setvalue: NAME} | {tprg: NAME} | {net: NAME} | {io: 'UI 3'}; feedback: true = one cycle old",
                     "out": "per output pin a list of {net}|{io}|{measure}", "exec": "declaration order inside the application"},
             stats={"applications": len(apps_out), "blocks": sum(len(a["blocks"]) for a in apps_out), "blocks_by_type": dict(sorted(by_type.items(), key=lambda x: -x[1])),
-                   "setvalues": len(setvalues), "measures": len(measures), "io": len(ios), "nets": len(nets)},
-            applications=apps_out, nets=list(nets.values()), setvalues=list(setvalues.values()), measures=list(measures.values()), io=ios,
+                   "setvalues": len(setvalues), "timeprograms": len(tprgs), "measures": len(measures), "io": len(ios), "nets": len(nets)},
+            applications=apps_out, nets=list(nets.values()), setvalues=list(setvalues.values()), timeprograms=list(tprgs.values()), measures=list(measures.values()), io=ios,
             alarms=self.alarms, left_out=self.left_out, notes=self.notes)
 
     generator = ""
@@ -267,5 +296,5 @@ class Plan:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(plan, f, ensure_ascii=False, indent=1)
         s = plan["stats"]
-        print(f"wrote {path}: {s['applications']} applications, {s['blocks']} blocks, {s['setvalues']} set values, {s['measures']} measures, {s['io']} I/O, {s['nets']} nets")
+        print(f"wrote {path}: {s['applications']} applications, {s['blocks']} blocks, {s['setvalues']} set values, {s['timeprograms']} time programs, {s['measures']} measures, {s['io']} I/O, {s['nets']} nets")
         return plan

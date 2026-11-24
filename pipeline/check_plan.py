@@ -75,6 +75,7 @@ def main(arg):
     order = {a["name"]: a["order"] for a in apps}
     BLK = {(a["name"], b["id"]): b for a in apps for b in a["blocks"]}
     SV = {s["name"]: s for s in P["setvalues"]}
+    TP = {t["name"]: t for t in P.get("timeprograms") or []}
     MS = {m["name"]: m for m in P["measures"]}
     NETS = {n["name"]: n for n in P["nets"]}
     IO = {}
@@ -106,7 +107,7 @@ def main(arg):
             d = pdef(t, pn, "in")
             if not d:
                 fail("P2", f"{an}/{bid}.{pn}: not an input of {t}"); continue
-            keys = [k for k in ("wire", "const", "setvalue", "net", "io") if k in s]
+            keys = [k for k in ("wire", "const", "setvalue", "tprg", "net", "io") if k in s]
             if len(keys) != 1:
                 fail("P4", f"{an}/{bid}.{pn}: {len(keys)} sources"); continue
             k = keys[0]
@@ -141,6 +142,14 @@ def main(arg):
                     fail("P6", f"{an}/{bid}.{pn}: set value on a U32 pin")
                 if t in EXTENDABLE and f"setvalue-on-extendable:{pn}" not in b.get("flags", []):
                     fail("P6", f"{an}/{bid}.{pn}: set value on an extendable input, not flagged")
+            elif k == "tprg":
+                tp = TP.get(s["tprg"])
+                if not tp or tp["pin"] != f"{an}/{bid}.{pn}":
+                    fail("P6", f"{an}/{bid}.{pn}: time program {s['tprg']} not declared on this pin")
+                elif tp["type"] == "On_Off" and d["type"] != "Enum":
+                    fail("P3", f"{an}/{bid}.{pn} ({d['type']}) <- On/Off time program {s['tprg']}")
+                elif tp["name"] in SV or tp["name"] in MS:
+                    fail("P6", f"time program {tp['name']} has the name of a set value or measure")
             elif k == "net":
                 readers[s["net"]].append((f"{an}/{bid}.{pn}", d["type"], bool(s.get("feedback"))))
             elif k == "io":

@@ -11,6 +11,7 @@ A program directory holds `program.json` (see PROGRAM_DEFAULTS below and example
   dev_3_import.ps1     import the applications in execution order
   dev_4_wires.ps1      device wires (physical points <-> applications, application -> application nets)
   modbus_set.ps1       Modbus register assignment (rule: program.json "modbus")
+  hmi_set.ps1          local HMI device menu (only when program.json has "hmi"): folders + rows from the generated menus
   expected.json        what verify_ouflex_build.py compares against (per app, device level, Modbus, plus the program config)
 
 Generated scripts call only the helpers in scripts/win/prelude.ps1 (B, IP, W, K, SETV, SVL,
@@ -71,7 +72,15 @@ PROGRAM_DEFAULTS = {
     #   "global" the writer's output carries a measure marked "Device level global"; each reader has a global pin
     #            (g_<name>) that refers to it by name. No interface pins, no device wires for nets.
     "net_transport": "wire",
+    # languages of the texts a user sees (point names, state texts, display menu). The plan holds English; every other
+    # language comes from the texts file (default texts.json next to program.json), filled by whoever translates.
+    # English goes to all 15 languages of the tool first, so an untranslated language shows English.
+    "languages": ["en"],
+    "texts": "texts.json",
 }
+# short language code -> the tool's language key (CMultilangString)
+LANG = {"en": "en-GB", "fi": "fi-FI", "sv": "sv-SE", "et": "et-EE", "ru": "ru-RU", "lv": "lv-LV", "tr": "tr-TR", "pl": "pl-PL",
+        "lt": "lt-LT", "da": "da-DK", "fr": "fr-FR", "de": "de-DE", "no": "no-NO", "cs": "cs-CZ", "nl": "nl-NL"}
 
 
 def load_program(pdir):
@@ -97,6 +106,13 @@ def load_program(pdir):
 
 def ps(s):
     return "'" + str(s).replace("'", "''") + "'"
+
+
+def ps_ml(d):
+    """{'en-GB': .., 'fi-FI': ..} -> PowerShell hashtable literal (one language: a plain string)"""
+    if len(d) == 1:
+        return ps(next(iter(d.values())))
+    return "@{" + ";".join(f"{ps(k)}={ps(v)}" for k, v in d.items()) + "}"
 
 
 def num(v):
@@ -144,6 +160,14 @@ class Gen:
         self.cfg = cfg
         self.P = json.load(open(cfg["plan_path"], encoding="utf-8"))
         P = self.P
+        tp = os.path.join(cfg["dir"], cfg.get("texts") or "texts.json")
+        self.texts = json.load(open(tp, encoding="utf-8")) if os.path.exists(tp) else {}
+        self.langs = [l for l in cfg.get("languages", ["en"]) if l != "en"]
+        for l in self.langs:
+            if l not in LANG:
+                raise SystemExit(f"program.json languages: unknown code {l!r} (known: {', '.join(LANG)})")
+        self.tx_missing = []
+        self.tx_expected = {}
         self.kinds = dict(IO_KINDS); self.kinds.update(cfg["io_kinds"])
         self.apps = P["applications"]
         self.IO = {i["point"]: i for i in P["io"]}
@@ -222,13 +246,28 @@ class Gen:
         man = json.load(open(lj, encoding="utf-8")).get(a["name"]) if os.path.exists(lj) else None
         return ouflayout.layout_app(a, self.in_name, self.out_name, self.cfg["required_fill"], log=log, manual=man)
 
+    def tx(self, key, en, obj=None):
+        """language map for the text of point `key` (English `en` from the plan, others from texts.json points);
+        records it for verification under the object name `obj` (default key) and notes missing translations"""
+        d = {"en-GB": en}
+        if not en:
+            return d
+        t = (self.texts.get("points") or {}).get(key) or {}
+        for l in self.langs:
+            if t.get(l):
+                d[LANG[l]] = t[l]
+            else:
+                self.tx_missing.append(f"{key}.{l}")
+        self.tx_expected[obj or key] = d
+        return d
+
     def build_app(self, a):
         app = a["name"]
         ops = []
         lay = self.layout(a)
         pos = lay["blocks"]
         ops.append(("app", f"AppName $cv {ps(app)} {ps(disp(a, 'display', 'name'))}"))
-        exp = {"name": app, "blocks": {}, "wires": {}, "consts": {}, "setvalue_pins": {}, "setvalues": {}, "measure_pins": {},
+        exp = {"name": app, "blocks": {}, "wires": {}, "consts": {}, "setvalue_pins": {}, "setvalues": {}, "tprgs": {}, "measure_pins": {},
                "measures": {}, "inpins": {}, "outpins": {}, "globalpins": {}, "globals": [], "labels": [], "exec": [], "layout": lay["stats"]}
         keep = defaultdict(list)
         for b in a["blocks"]:
@@ -291,6 +330,8 @@ class Gen:
                     exp["consts"][dst] = src["const"]
                 elif "setvalue" in src:
                     exp["setvalue_pins"][dst] = src["setvalue"]
+                elif "tprg" in src:
+                    pass                        # TPRG below, after every constant (a schedule object must exist when the tool syncs)
             for pn, v in fill.get(b["type"], {}).items():
                 if pn not in b["pins"]:
                     dst = self.bref(app, f"{b['id']}.{pn}")
@@ -305,11 +346,21 @@ class Gen:
                 dst = self.bref(app, p.split("/", 1)[1])
                 if i == 0:
                     mn, mx, unit, dec = (s["min"], s["max"], s["unit"], s["decimals"]) if s["type"] == "Float" else (0, 1, "", None)
-                    ops.append(("setvalue", f"SETV $cv {ps(dst)} {ps(s['name'])} {num(s['default'])} {num(mn)} {num(mx)} {ps(unit)} {ps(disp(s, 'display', 'display_fi'))} {nul(dec)}"))
+                    ops.append(("setvalue", f"SETV $cv {ps(dst)} {ps(s['name'])} {num(s['default'])} {num(mn)} {num(mx)} {ps(unit)} {ps_ml(self.tx(s['name'], disp(s, 'display', 'display_fi')))} {nul(dec)}"))
                 else:
                     ops.append(("setvalue_link", f"SVL $cv {ps(dst)} {ps(s['name'])}"))
             exp["setvalues"][s["name"]] = {"type": s["type"], "default": s["default"], "min": s["min"], "max": s["max"], "unit": s["unit"],
                                            "decimals": s["decimals"], "pins": [self.bref(app, p.split("/", 1)[1]) for p in pins]}
+        for t in self.P.get("timeprograms") or []:
+            if not t["pin"].startswith(app + "/"):
+                continue
+            dst = self.bref(app, t["pin"].split("/", 1)[1])
+            st = self.tprg_states(t)
+            sts = "@(" + ",".join(ps_ml(x) for x in st) + ")" if st else "$null"
+            wk = "@(" + ",".join(ps(d) for d in t["week"]) + ")"
+            ops.append(("tprg", f"TPRG $cv {ps(dst)} {ps(t['name'])} {num(t['default'])} {wk} {ps_ml(self.tx(t['name'], t.get('display') or ''))} {sts} {ps(t.get('type') or 'On_Off')}"))
+            exp["tprgs"][t["name"]] = {"pin": dst, "type": t.get("type") or "On_Off", "default": t["default"], "week": t["week"],
+                                       "states": {k: f"{st[0][k]}/{st[1][k]}" for k in st[0]} if st else None}
         for b in a["blocks"]:
             for pn, outs in b["out"].items():
                 src = self.bref(app, f"{b['id']}.{pn}")
@@ -317,7 +368,7 @@ class Gen:
                     if "measure" in o:
                         m = self.MEAS[o["measure"]]
                         dec = self.measure_decimals(m)
-                        ops.append(("measure", f"MS $cv {ps(src)} {ps(m['name'])} {ps(m.get('unit') or '')} {nul(dec)} {ps(disp(m, 'display', 'display_fi'))}"))
+                        ops.append(("measure", f"MS $cv {ps(src)} {ps(m['name'])} {ps(m.get('unit') or '')} {nul(dec)} {ps_ml(self.tx(m['name'], disp(m, 'display', 'display_fi')))}"))
                         exp["measures"][m["name"]] = {"src": src, "unit": m.get("unit") or "", "decimals": dec}
                         exp["measure_pins"][src] = m["name"]
                     elif "net" in o and self.use_globals:
@@ -336,6 +387,22 @@ class Gen:
         ops.append(("exec", "EO $cv @(" + ",".join(ps(x) for x in exp["exec"]) + ")"))
         ops.append(("hide", "HU $cv"))
         return ops, exp
+
+    def tprg_states(self, t):
+        """[off, on] language maps of a time program's states: English from the plan, others from texts.json states"""
+        en = t.get("states")
+        if not en:
+            if len(self.langs):
+                self.tx_missing.append(f"states {t['name']} (time program without state texts)")
+            return None
+        st = (self.texts.get("states") or {}).get(t["name"]) or {}
+        off, on = {"en-GB": en[0]}, {"en-GB": en[1]}
+        for l in self.langs:
+            if st.get(l):
+                off[LANG[l]], on[LANG[l]] = st[l][0], st[l][1]
+            else:
+                self.tx_missing.append(f"states {t['name']}.{l}")
+        return [off, on]
 
     def measure_boolean(self, m):
         if m.get("type"):
@@ -394,7 +461,7 @@ class Gen:
                 lines.append(f"BP $cv {ps(m['object'].format(n))} {m['x']} {m['y0'] + m['step'] * (n - 1)}")
                 mod_points.append(m["object"].format(n))
         for p, obj, i, k in pts:
-            lines.append(f"IOC $cv {ps(obj)} {ps(k.get('phys') or '')} {ps(k.get('devtype') or '')} {nul(k.get('min'))} {nul(k.get('max'))} {ps(k.get('unit') or '')} {nul(k.get('decimals'))} {ps(disp(i, 'description', 'description_fi'))} {ps(cfg['polarity'] if i['dir'] == 'in' else '')}")
+            lines.append(f"IOC $cv {ps(obj)} {ps(k.get('phys') or '')} {ps(k.get('devtype') or '')} {nul(k.get('min'))} {nul(k.get('max'))} {ps(k.get('unit') or '')} {nul(k.get('decimals'))} {ps_ml(self.tx(i['pin'], disp(i, 'description', 'description_fi'), obj))} {ps(cfg['polarity'] if i['dir'] == 'in' else '')}")
             for pk, v in k.get("params", {}).items():
                 lines.append(f"IOP $cv {ps(obj)} {ps(pk)} {num(v)}")
             if i["dir"] == "out":
@@ -484,13 +551,150 @@ class Gen:
         write_bom(os.path.join(OUT, "modbus_set.ps1"), "\n".join(lines) + "\n")
         expected["modbus"] = mb
         expected["modbus_rule"] = {"base": mbc["base"], "areas": mbc["areas"]}
+        # ---- texts at device level: state texts of binary points (texts.json "states"), local HMI menu (program.json "hmi") ----
+        hm = cfg.get("hmi") or {}
+        langs = ["en"] + self.langs
+        binaries = {}
+        for sv in P["setvalues"]:
+            if sv["type"] == "Enum" and sv["pins"]:
+                binaries[sv["name"]] = sv["pins"][0].split("/")[0]
+        for m in P["measures"]:
+            if m.get("type") == "Enum" and not m["source"].startswith("io:"):
+                binaries[m["name"]] = m["source"].split("/")[0]
+        st_all = dict(self.texts.get("states") or {})
+        for k, v in (hm.get("states") or {}).items():          # older form in program.json hmi: [off en, on en, off fi, on fi]
+            if isinstance(v, list):
+                st_all.setdefault(k, {"en": v[0:2], "fi": v[2:4]})
+        st_lines, st_exp = [], {}
+        tp_names = {t["name"] for t in P.get("timeprograms") or []}
+        for name, st in st_all.items():
+            if name.startswith("_") or name in tp_names:     # time program states are written by TPRG in the application
+                continue
+            if name not in binaries:
+                raise SystemExit(f"texts.json states: {name} is not a binary set value or measurement of an application")
+            off = {LANG[l]: st[l][0] for l in langs if st.get(l)}
+            on = {LANG[l]: st[l][1] for l in langs if st.get(l)}
+            if "en-GB" not in off:
+                raise SystemExit(f"texts.json states: {name} has no English texts")
+            self.tx_missing += [f"states {name}.{l}" for l in self.langs if not st.get(l)]
+            st_lines.append(f"HST {ps(binaries[name])} {ps(name)} {ps_ml(off)} {ps_ml(on)}")
+            st_exp[name] = {k: f"{off[k]}/{on[k]}" for k in off}
+        self.tx_missing += [f"states {n} (binary point without state texts)" for n in binaries if n not in st_all and len(langs) > 1]
+        hl = ["# Device-level texts (generated): local HMI device menu (program.json hmi; HF = folder, HD = row dropped from an",
+              "# application's generated menu) and state texts of binary points (texts.json states; HST). Texts: language hashtables."]
+        hx = []
+        def itx(it, where):
+            d = {"en-GB": it["en"]}
+            for l in self.langs:
+                if it.get(l):
+                    d[LANG[l]] = it[l]
+                else:
+                    self.tx_missing.append(f"hmi {where}.{l}")
+            return d
+        def walk(items, parent, depth):
+            for it in items:
+                en = it["en"]
+                d = itx(it, (parent + "/" if parent else "") + en)
+                if "items" in it:
+                    hl.append(f"HF {ps(parent)} {ps_ml(d)}")
+                    hx.append({"depth": depth, "kind": "menu", "object": "", "en": en, "texts": d})
+                    walk(it["items"], (parent + "/" if parent else "") + en, depth + 1)
+                elif "curve" in it:
+                    hl.append(f"HD {ps(parent)} {ps(it['app'])} {ps(it['curve'])} {ps_ml(d)}")
+                    pre = f"{it['app']}/{it['curve']}."
+                    pts = [sv["name"] for sv in P["setvalues"] if any(q.startswith(pre) for q in sv["pins"])]
+                    if not pts:
+                        raise SystemExit(f"hmi: curve {it['app']}/{it['curve']} has no set values in the plan")
+                    hx.append({"depth": depth, "kind": "curve", "object": "", "en": en, "texts": d, "points": pts})
+                else:
+                    hl.append(f"HD {ps(parent)} {ps(it['app'])} {ps(it['point'])} {ps_ml(d)}")
+                    e = {"depth": depth, "kind": "row", "object": it["point"], "en": en, "texts": d}
+                    if it["point"] in st_exp:
+                        e["states"] = st_exp[it["point"]]
+                    hx.append(e)
+        if hm.get("menu") or st_lines:
+            if hm.get("menu"):
+                hl.append("Hmi-Ui | out-null")
+                walk(hm["menu"], "", 0)
+            hl += st_lines
+            hl.append("Build-Summary 'hmi'")
+            write_bom(os.path.join(OUT, "hmi_set.ps1"), "\n".join(hl) + "\n")
+            expected["hmi"] = hx
+            expected["states"] = st_exp
+        # ---- Web UI pages (program.json "webui": {"language": "fi", "pages": [{"name": {...}|str, "file": "webui/x.json"}]}) ----
+        wu = cfg.get("webui") or {}
+        tr = cfg.get("trends") or {}
+        if wu.get("pages") or tr.get("groups"):
+            wl = wu.get("language") or (self.langs[0] if self.langs else "en")
+            def pick(v):
+                return (v.get(wl) or v.get("en") or next(iter(v.values()))) if isinstance(v, dict) else v
+            def localise(o):
+                if isinstance(o, dict):
+                    if o and set(o) <= set(LANG) and all(isinstance(x, str) for x in o.values()):
+                        return pick(o)
+                    return {k: localise(v) for k, v in o.items()}
+                if isinstance(o, list):
+                    return [localise(x) for x in o]
+                return o
+            known = {f"{(sv['pins'][0].split('/')[0])}.{sv['name']}" for sv in P["setvalues"] if sv["pins"]}
+            known |= {f"{m['source'].split('/')[0]}.{m['name']}" for m in P["measures"] if not m["source"].startswith("io:")}
+            known |= {i["point"] for i in P["io"]} | {i["point"].replace(" ", "") for i in P["io"]}
+            known |= {f"{t['pin'].split('/')[0]}.{t['name']}" for t in P.get("timeprograms") or []}
+            os.makedirs(os.path.join(OUT, "webui"), exist_ok=True)
+            wlines = [f"# Web UI pages (program.json webui, texts in {wl}); WEBP fills each page's link registry from the project"]
+            wexp = []
+            for i, pg in enumerate(wu.get("pages") or [], 1):
+                src = json.load(open(os.path.join(cfg["dir"], pg["file"]), encoding="utf-8"))
+                page = localise(src)
+                links = []
+                for c in page["component"]["components"].values():
+                    for l in c.get("links", []):
+                        if l not in links:
+                            links.append(l)
+                bad = [l for l in links if l not in known]
+                if bad:
+                    raise SystemExit(f"webui {pg['file']}: links to points the plan does not have: {bad}")
+                name = pick(pg["name"])
+                fn = f"page{i}.json"
+                with open(os.path.join(OUT, "webui", fn), "w", encoding="utf-8") as f:
+                    json.dump(page, f, ensure_ascii=False)
+                wlines.append(f"WEBP {ps(name)} \"$PSScriptRoot\\webui\\{fn}\"")
+                wexp.append({"name": name, "file": pg["file"], "components": len(page["component"]["components"]), "links": links})
+            # trends: a trend log per point (TRD), then the groups the web UI's trend view shows (TGRP, at most 30 points each)
+            texp = []
+            if tr.get("groups"):
+                iv, ln = int(tr.get("interval", 60)), int(tr.get("length", 10000))
+                done = []
+                for g in tr["groups"]:
+                    for ax in g["axes"]:
+                        for pt in ax["points"]:
+                            if pt not in known:
+                                raise SystemExit(f"trends: {pt} is not a point of the plan")
+                            if pt not in done:
+                                done.append(pt)
+                                wlines.append(f"TRD {ps(pt)} {iv} {ln}")
+                for g in tr["groups"]:
+                    n_pts = sum(len(ax["points"]) for ax in g["axes"])
+                    if n_pts > 30:
+                        raise SystemExit(f"trends: group {pick(g['name'])!r} has {n_pts} points (at most 30)")
+                    axes = "@(" + ", ".join("@{name=" + ps(pick(ax["name"])) + "; points=@(" + ",".join(ps(p) for p in ax["points"]) + ")}" for ax in g["axes"]) + ")"
+                    wlines.append(f"TGRP {ps(pick(g['name']))} {axes}")
+                    texp.append({"name": pick(g["name"]), "axes": [{"name": pick(ax["name"]), "points": ax["points"]} for ax in g["axes"]]})
+                expected["trends"] = {"interval": iv, "length": ln, "groups": texp}
+            wlines.append("Build-Summary 'webui'")
+            write_bom(os.path.join(OUT, "web_set.ps1"), "\n".join(wlines) + "\n")
+            expected["webui"] = {"language": wl, "pages": wexp}
+        expected["texts"] = self.tx_expected
+        expected["languages"] = [LANG[l] for l in langs]
+        if self.tx_missing:
+            print(f"WARNING {len(self.tx_missing)} text(s) without translation ({', '.join(self.langs)}): " + ", ".join(self.tx_missing[:12]) + (" ..." if len(self.tx_missing) > 12 else ""))
         expected["manifest"] = manifest
         with open(os.path.join(OUT, "expected.json"), "w", encoding="utf-8") as f:
             json.dump(expected, f, ensure_ascii=False, indent=1)
         if self.use_globals:
             self.write_signals(os.path.join(OUT, "signals.md"))
         tot = sum(m["ops"] for m in manifest)
-        print(f"wrote {OUT}: {sum(len(m['scripts']) for m in manifest)} app scripts ({tot} ops), 3 device scripts, modbus_set.ps1, expected.json")
+        print(f"wrote {OUT}: {sum(len(m['scripts']) for m in manifest)} app scripts ({tot} ops), 3 device scripts, modbus_set.ps1, {'hmi_set.ps1, ' if expected.get('hmi') else ''}expected.json")
         for m in manifest:
             print(f"  {m['app']}: {m['ops']} ops in {len(m['scripts'])} script(s)")
         print("  renamed:", expected["naming"]["net_pin"], expected["naming"]["block"])

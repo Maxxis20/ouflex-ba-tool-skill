@@ -38,6 +38,15 @@ function Inv1($o,$name,$arg){ $o=UW $o; $m=@($o.GetType().GetMethods([Reflection
 function Check($cv){ $l=[System.Collections.Generic.List[string]]::new(); $ok=Inv1 (GF $cv 'm_DataComponent') 'CheckAll' $l; "check=$ok"; $l | ? { $_ } | % { "  msg: $_" } }
 function Save-App(){ CM (FindCtl $form 'ApplicationEditor' | select -First 1) 'fastSave' $null | out-null }
 function InvStr($v){ if($v -is [bool]){ if($v){'1'}else{'0'} } else { [Convert]::ToString($v,[Globalization.CultureInfo]::InvariantCulture) } }
+# multilingual text: a string goes to all 15 languages; a hashtable @{'en-GB'=..;'fi-FI'=..;'sv-SE'=..} puts en-GB (else its first
+# value) in every language, then each given language over it. ML-Base = the text to match by (en-GB).
+function ML-Base($v){ if($v -is [System.Collections.IDictionary]){ if($v.Contains('en-GB')){ "$($v['en-GB'])" } else { "$(@($v.Values)[0])" } } else { "$v" } }
+function Set-ML($mls,$v){ if($null -eq $mls -or -not $v){ return }; $mls.SetTextToAllLang((ML-Base $v)); if($v -is [System.Collections.IDictionary]){ foreach($k in $v.Keys){ if($v[$k]){ $mls.SetString("$($v[$k])","$k") } } } }
+function ML-En($mls){ if(-not $mls){ return '' }; $d=GF $mls 'm_Strings'; if($d.ContainsKey('en-GB')){ $d['en-GB'] } else { "$mls" } }   # the English text, whatever the document language
+function ML-Str($mls){ if(-not $mls){ return '' }; ((GF $mls 'm_Strings').GetEnumerator() | sort Key | % { "$($_.Key)=$($_.Value)" }) -join '^' }
+function TXL($o){ if($o -and (HasF $o 'm_DisplayName') -and $o.DisplayName){ "TX|$($o.VariableName)|$(ML-Str $o.DisplayName)" } }   # every language of a display name
+function STL($o){ if($o -and (HasF $o 'm_ActiveText')){ $a=GF $o 'm_InactiveText'; $b=GF $o 'm_ActiveText'; if($a -and $b){ $da=GF $a 'm_Strings'; $db=GF $b 'm_Strings'
+    "ST|$($o.VariableName)|" + (($da.Keys | sort | % { "$_=$($da[$_])/$($db[$_])" }) -join '^') } } }   # state texts off/on per language
 # constant on an unwired input pin (graphic pin from SPin); same as menu "Add constant value" + the Set value dialog
 function Set-Const($cv,$pin,$value){ $pin=UW $pin; $c=$pin.ConstValueSymbol
   if(-not $c.ShowSymbol){ $old=GF $cv 'm_selectedElement'; SF $cv 'm_selectedElement' $pin; CM $cv 'InputPin_set_Delete_constValue_Click' @((GF $cv 'inputPinConstValueItem'),[EventArgs]::Empty) | out-null; SF $cv 'm_selectedElement' $old }
@@ -72,7 +81,7 @@ function HasF($o,$name){ $t=$o.GetType(); while($t){ if($t.GetField($name,$BFA))
 function Add-SetValue($cv,$pin,$name,$value,$min,$max,$unit,$display,$decimals){ $pin=UW $pin; if(-not $pin.IsFree){ throw "pin not free" }
   $o=Inv1 (GF $cv 'm_DataComponent') 'AddSetvalue' $pin.DataObject
   Show-PinSym $pin $pin.SetPointSymbol $o
-  if($name){ $o.VariableName=$name; $o.NameChangedByUser=$true; if($o.VariableName -ne $name){ throw "set value name $name refused" } }; if($display){ $o.DisplayName.SetTextToAllLang($display) }
+  if($name){ $o.VariableName=$name; $o.NameChangedByUser=$true; if($o.VariableName -ne $name){ throw "set value name $name refused" } }; if($display){ Set-ML $o.DisplayName $display }
   $an=HasF $o 'm_MinValue'   # CAnalogSetpointObject; the binary one (Enum pin) has no min/max/unit/decimals
   if($an){ if($null -ne $min){ $o.MinValue=$min }; if($null -ne $max){ $o.MaxValue=$max }; if($unit){ $o.UnitStr=$unit }; if($null -ne $decimals){ SF $o 'm_Desimals' ([byte]$decimals) } }
   if($null -ne $value){ $o.PresentValue=(InvStr $value) }; ,$o }
@@ -80,7 +89,7 @@ function Add-SetValue($cv,$pin,$name,$value,$min,$max,$unit,$display,$decimals){
 function Add-Measure($cv,$pin,$name,$unit,$decimals,$display){ $pin=UW $pin
   $o=Inv1 (GF $cv 'm_DataComponent') 'AddMeasure' $pin.DataObject
   Show-PinSym $pin $pin.MeasureSymbol $o -right
-  if($name){ $o.VariableName=$name; $o.NameChangedByUser=$true }; if($display){ $o.DisplayName.SetTextToAllLang($display) }
+  if($name){ $o.VariableName=$name; $o.NameChangedByUser=$true }; if($display){ Set-ML $o.DisplayName $display }
   if($name -and $o.VariableName -ne $name){ throw "measure name $name refused" }
   if(HasF $o 'm_Desimals'){ if($unit){ $o.UnitStr=$unit }; if($null -ne $decimals){ SF $o 'm_Desimals' ([byte]$decimals) } }; ,$o }
 # hide unused inputs/outputs of a block (menu "Hidden pins"); only Inactive pins should be hidden. Returns the (rebuilt) symbol.
@@ -103,7 +112,7 @@ function Set-IoType($cv,$name,$phys,$devType,$params,$min,$max,$unit,$display,$p
   if($devType -or $params){ $dt=$u.DeviceType; if($devType){ $dt.DeviceType=$devType }; if($params){ $dt.SetDevTypeParams($params,$u.IoType) }; $u.DeviceType=$dt }
   if($polarity){ $u.Polarity=$polarity }
   if($null -ne $min){ $u.MinPresentValue=$min }; if($null -ne $max){ $u.MaxPresentValue=$max }; if($unit){ $u.UnitStr=$unit }
-  if($display){ $u.DisplayName.SetTextToAllLang($display) }; ,$u }
+  if($display){ Set-ML $u.DisplayName $display }; ,$u }
 # one device-type parameter by name (EDevTypeParameter: MinChannelChange, ADConverterSpeed, SampleCount, MinVoltLimit, MaxVoltLimit, Min_mA_Limit, Max_mA_Limit, VoltIn0ffState, VoltInOnState, PulseScaling ...)
 function Set-DevParam($cv,$name,$param,$value){ $u=DevObj $cv $name; $dt=$u.DeviceType; $e=$dt.GetUIParams()[0].Parameter.GetType(); $p=$dt.GetParam([Enum]::Parse($e,$param)); if(-not $p){ throw "no param $param on $($dt.DeviceType)" }; $p.Value=$value; $u.DeviceType=$dt }
 function Get-DevParams($cv,$name){ $u=DevObj $cv $name; "$name $($u.DeviceType.DeviceType) " + (($u.DeviceType.GetUIParams() | % { "$($_.Parameter)=$($_.Value)" }) -join '; ') }
@@ -118,6 +127,10 @@ function MenuClickHandler($itemName){ $mi=$null
 # PerformClick on a closed menu does nothing, so the item's Click delegate is posted instead (runs after this script returns)
 function Start-MenuItem($itemName){ $h=MenuClickHandler $itemName; $form.BeginInvoke($h,[object[]]@($null,[EventArgs]::Empty)) | out-null; "posted $itemName" }
 function Start-ModbusExport(){ Start-MenuItem 'modbusInterfaceToolStripMenuItem' }
+# Modbus interface document without the Save As dialog (what the menu handler does after it): the device's CDescriptionFileCreator
+function Export-ModbusHtml([string]$path){ $t=(MenuClickHandler 'modbusInterfaceToolStripMenuItem').Target; $dev=GF $t 'm_CurrentDevice'; if(-not $dev){ throw 'no current device' }
+  $conv=@($dev.OnlineConnection.DeviceDataConverters) | ? { $_.GetType().Name -eq 'CDescriptionFileCreator' } | select -First 1; if(-not $conv){ throw 'no CDescriptionFileCreator' }
+  $conv.OuFlexDevice=$dev; [void]$conv.createModbusInterfaceHtml($path,$true); if(-not (Test-Path $path)){ throw "Modbus document $path not written" }; "wrote $path $((Get-Item $path).Length)" }
 # parse the exported html ('var data' block) into rows: Section, Group, then the columns of that table's header
 function Get-ModbusMap($html){ $t=Get-Content -Raw -Encoding UTF8 $html; $i=$t.IndexOf("var data = '"); $j=$t.IndexOf("';",$i)
   $sec=''; $grp=''; $hdr=$null
@@ -156,7 +169,7 @@ function PinMenu($cv,$pin,$handler,$item){ $old=GF $cv 'm_selectedElement'; SF $
 function Drop-Builtins($cv,$sym,[string[]]$keep){ $sym=UW $sym; $n=0
   foreach($p in @($sym.InputPins)+@($sym.HiddenInputs)){ if($p -and $p.SetPointSymbol -and $p.SetPointSymbol.ShowSymbol -and $p.DataObject.ReferenceObject -and -not ($keep -contains $p.DataObject.VariableName)){ PinMenu $cv $p 'InputPin_Add_Delete_SetValue_Click' 'inputPinSetValueItem'; $n++ } }
   foreach($p in @($sym.OutputPins)+@($sym.HiddenOutputs)){ if($p -and $p.MeasureSymbol -and $p.MeasureSymbol.ShowSymbol -and -not ($keep -contains $p.DataObject.VariableName)){ PinMenu $cv $p 'outPutPinAddDeleteMeasure_Click' 'outputPinMeasureItem'; $n++ } }; $n }
-function AppName($cv,$name,$display){ try { $d=DC $cv; if($d.TypeName -ne $name){ $d.TypeName=$name; $global:BS.add++ } else { $global:BS.skip++ }; if($display){ $d.DisplayName.SetTextToAllLang($display) } } catch { BFail "AppName $name" $_ } }
+function AppName($cv,$name,$display){ try { $d=DC $cv; if($d.TypeName -ne $name){ $d.TypeName=$name; $global:BS.add++ } else { $global:BS.skip++ }; if($display){ Set-ML $d.DisplayName $display } } catch { BFail "AppName $name" $_ } }
 # block: B $cv id type x y @(pins whose built-in set value/measure the plan reuses)
 function B($cv,$id,$type,$x,$y,[string[]]$keep){ try { if(Sym $cv $id){ $global:BS.skip++; return }
   if(NameTaken $cv $id){ throw "name $id taken" }
@@ -179,7 +192,7 @@ function W($cv,$src,$dst){ try { $s=UW (GPin $cv $src); $d=UW (GPin $cv $dst)
 # typed constant on an input: K $cv 'blk.pin' value
 function K($cv,$dst,$v){ try { $d=UW (GPin $cv $dst); if($d.DataObject.ReferenceObject){ throw "pin is wired" }
   if($d.ConstValueSymbol.ShowSymbol -and $d.DataObject.PresentValue -eq (InvStr $v)){ $global:BS.skip++; return }; Set-Const $cv $d $v; $global:BS.add++ } catch { BFail "K $dst" $_ } }
-function Set-SVFields($o,$def,$min,$max,$unit,$disp,$dec){ if($disp){ $o.DisplayName.SetTextToAllLang($disp) }
+function Set-SVFields($o,$def,$min,$max,$unit,$disp,$dec){ if($disp){ Set-ML $o.DisplayName $disp }
   if(HasF $o 'm_MinValue'){ $o.MinValue=$min; $o.MaxValue=$max; if($null -ne $unit -and "$($o.UnitStr)" -ne $unit){ $o.UnitStr=$unit }; if($null -ne $dec){ SF $o 'm_Desimals' ([byte]$dec) } }  # '' clears a vendor unit (Pid P arrives with °C)
   $o.PresentValue=(InvStr $def) }
 # named set value on an input (not "SV": that is the Set-Variable alias): SETV $cv 'blk.pin' NAME default min max unit display decimals (reuses a vendor built-in on that pin)
@@ -197,7 +210,7 @@ function SVL($cv,$dst,$name){ try { $d=UW (GPin $cv $dst); $o=ObjByName $cv $nam
 function MS($cv,$src,$name,$unit,$dec,$disp){ try { $p=UW (GPin $cv $src)
   if($p.MeasureSymbol.ShowSymbol -and $p.MeasureSymbol.DataObject){ $o=$p.MeasureSymbol.DataObject; if($o.VariableName -eq $name){ $global:BS.skip++ } else { if(NameTaken $cv $name){ throw "name $name taken" }; $o.VariableName=$name; $o.NameChangedByUser=$true; $global:BS.add++ } }
   else { if(NameTaken $cv $name){ throw "name $name taken" }; $o=Inv1 (DC $cv) 'AddMeasure' $p.DataObject; Show-PinSym $p $p.MeasureSymbol $o -right; $o.VariableName=$name; $o.NameChangedByUser=$true; if($o.VariableName -ne $name){ throw "name refused" }; $global:BS.add++ }
-  if($disp){ $o.DisplayName.SetTextToAllLang($disp) }; if(HasF $o 'm_Desimals'){ if($unit){ $o.UnitStr=$unit }; if($null -ne $dec){ SF $o 'm_Desimals' ([byte]$dec) } } } catch { BFail "MS $name" $_ } }
+  if($disp){ Set-ML $o.DisplayName $disp }; if(HasF $o 'm_Desimals'){ if($unit){ $o.UnitStr=$unit }; if($null -ne $dec){ SF $o 'm_Desimals' ([byte]$dec) } } } catch { BFail "MS $name" $_ } }
 # global pin (canvas menu "New global pin", without its name dialog): GLP $cv NAME x y (not "GP": that is the Get-ItemProperty alias). Reads the object called NAME that has
 # "Device level global" = True anywhere in the device; the link is by name and is resolved when the project is opened.
 function GLP($cv,$name,$x,$y){ try { if(GlobPin $cv $name){ $global:BS.skip++; return }
@@ -206,6 +219,36 @@ function GLP($cv,$name,$x,$y){ try { if(GlobPin $cv $name){ $global:BS.skip++; r
 # mark a measure (or any named object of the application) as device level global: MG $cv NAME
 function MG($cv,$name){ try { $o=ObjByName $cv $name; if(-not $o){ throw "no object $name" }; if($o.Global){ $global:BS.skip++ } else { $o.Global=$true; if(-not $o.Global){ throw "Global refused" }; $global:BS.add++ } } catch { BFail "MG $name" $_ } }
 function LB($cv,$text,$x,$y){ try { if(@((Content $cv).Elements | ? { $_.GetType().Name -eq 'Comment' -and $_.CommentText -eq $text }).Count){ $global:BS.skip++; return }; Add-Label $cv $text $x $y | out-null; $global:BS.add++ } catch { BFail "LB $text" $_ } }
+# ---- time programs (schedule objects) ----
+# A time program sits on a BLOCK input pin (not an interface pin: syncronizeDiagram_Data keeps an object only when GetSymbol
+# finds it on a block pin's SetPoint/ConnectPoint/Time/Measure symbol, so one on an EditorInputPin is dropped and never saved).
+# Same steps as the pin menu "Add time program" (MyCanvas.addTimeprogramToolStripMenuItem_Click) without its dialogs.
+function TP-Types(){ if(-not $global:__tpT){ $a=[AppDomain]::CurrentDomain.GetAssemblies() | ? { $_.GetName().Name -eq 'BacnetObjectClasses' } | select -First 1; $h=@{}
+    foreach($n in 'DP_TimeValue','OUFLEX_Time','DPValue','EValueType','ETimeprogramType'){ $h[$n]=$a.GetTypes() | ? { $_.Name -eq $n } | select -First 1 }; $global:__tpT=$h }; $global:__tpT }
+function TP-Entry($hhmm,$v,[string]$type){ $T=TP-Types; $h,$m=$hhmm.Split(':')
+  $tm=[Activator]::CreateInstance($T.OUFLEX_Time,[object[]]@([byte]$h,[byte]$m,[byte]0,[byte]0))
+  if($type -eq 'Value'){ $vt=[Enum]::Parse($T.EValueType,'Float'); $val=[single]$v } else { $vt=[Enum]::Parse($T.EValueType,'Enum'); $val=[uint32]$v }   # what WeeklyScheduleUserControl.EnumValueToDPValue writes
+  $dv=[Activator]::CreateInstance($T.DPValue,[object[]]@($vt,[int16]0,[byte]0,$val)); [Activator]::CreateInstance($T.DP_TimeValue,[object[]]@($tm,$dv)) }
+# week: 7 strings Monday..Sunday, each 'HH:MM=v,HH:MM=v' ('' = no switching that day). Text of a day as Dump-App prints it.
+function TP-Week($s){ $d=GF (GF $s 'm_WeeklySchedule') 'm_WeeklySchedule'; (0..6 | % { ((GF $d[$_] 'm_TimeValues') | % { $t=$_.Time; '{0:D2}:{1:D2}={2}' -f [int]$t.Hour,[int]$t.Minute,$(if($_.Value.ValueType -eq 8){ InvStr $_.Value.FloatValue } else { $_.Value.U32Value }) }) -join ',' }) -join ';' }
+function TP-SetWeek($s,[string[]]$week,[string]$type){ if($week.Count -ne 7){ throw "week needs 7 days, got $($week.Count)" }; $d=GF (GF $s 'm_WeeklySchedule') 'm_WeeklySchedule'
+  for($i=0;$i -lt 7;$i++){ $l=GF $d[$i] 'm_TimeValues'; $l.Clear(); foreach($e in ($week[$i] -split ',' | ? { $_ })){ $k,$v=$e.Split('='); $l.Add((TP-Entry $k.Trim() $v.Trim() $type)) } } }
+# TPRG $cv 'blk.pin' NAME default @(7 days) display @(@{off texts},@{on texts}) [On_Off|Value]
+function TPRG($cv,$dst,$name,$def,[string[]]$week,$disp,$states,[string]$type='On_Off'){ try { $p=UW (GPin $cv $dst); $po=$p.DataObject; $s=$po.ReferenceObject
+  if($s -and $s.GetType().Name -ne 'CBacnetScheduleObject'){ throw "pin is wired" }
+  if(-not $s){ if($p.ConstValueSymbol.ShowSymbol){ Clear-Const $cv $p }; if(NameTaken $cv $name){ throw "name $name taken" }
+    $s=Inv1 (DC $cv) 'AddTimeProgram' $po; if(-not $s){ throw "AddTimeProgram refused (not a free input pin?)" }
+    $s.PositionInUse=$true; $s.PositionTable=$po.PositionTable.Clone(); $po.PositionCopied=$true
+    (GF $cv 'host').ActiveDesigner.Recorder.PropertySet($p.TimeSymbol,'ShowSymbol',$true); $p.TimeSymbol.DataObject=$s
+    CM $cv 'syncronizeDiagram_Data' $null | out-null; $global:BS.add++ } else { $global:BS.skip++ }
+  if($s.VariableName -ne $name){ $s.VariableName=$name; $s.NameChangedByUser=$true; if($s.VariableName -ne $name){ throw "name $name refused" } }
+  SF $s 'm_TimeProgramType' ([Enum]::Parse((TP-Types).ETimeprogramType,$type)); SF $s 'm_DefaultValue' (InvStr $def); $s.PresentValue=(InvStr $def)
+  if($disp){ Set-ML $s.DisplayName $disp }
+  if($states){ $L1=GF $s 'm_States'; $L2=GF $s 'm_Enums'; for($i=0;$i -lt 2;$i++){ if($L1 -and $i -lt $L1.Count){ Set-ML (GF $L1[$i] 'm_Text') $states[$i] }; if($L2 -and $i -lt $L2.Count -and -not [object]::ReferenceEquals($L1,$L2)){ Set-ML (GF $L2[$i] 'm_Text') $states[$i] } } }
+  TP-SetWeek $s $week $type
+  if(-not @((GF (DC $cv) 'm_ObjectList') | ? { [object]::ReferenceEquals($_,$s) }).Count){ throw "schedule $name not in the object list" } } catch { BFail "TPRG $name" $_ } }
+function TPL($o){ if($o -and $o.GetType().Name -eq 'CBacnetScheduleObject'){ $L=GF $o 'm_States'; $st=(@(for($i=0;$i -lt $L.Count;$i++){ ML-Str (GF $L[$i] 'm_Text') })) -join '|'
+    "TP|$($o.VariableName)|$(GF $o 'm_TimeProgramType')|$(GF $o 'm_DefaultValue')|$(TP-Week $o)|$(ML-En $o.DisplayName)"; TXL $o; "TS|$($o.VariableName)|$st" } }
 # hide every pin that is not used: inputs Inactive, free and unwired; outputs with no wire and no measurement
 function HU($cv){ try { foreach($s in @(Symbols $cv)){ $n=$s.ComponentName; $names=@()
     foreach($p in @($s.InputPins)){ if($p -and $p.DataObject.State -eq 'Inactive' -and $p.IsFree -and -not $p.DataObject.ReferenceObject -and $p.ConnectedLines.Count -eq 0){ $names+=$p.DataObject.VariableName } }
@@ -221,14 +264,16 @@ function Dump-App($cv){ $d=DC $cv; "APP|$($d.TypeName)|$($d.DisplayName)|auto=$(
   foreach($s in @(Symbols $cv)){ foreach($p in @($s.InputPins)+@($s.HiddenInputs)){ if(-not $p){ continue }; $o=$p.DataObject; $r=$o.ReferenceObject; $f="$($s.ComponentName).$($o.VariableName)"
       if($o.ReferenceGlobal){ "W|$f|%$($o.ReferenceGlobal)|lines=$($p.ConnectedLines.Count)" }
       elseif($r -and $r.GetType().Name -match 'SetpointObject$'){ "SVP|$f|$($r.VariableName)" }
+      elseif($r -and $r.GetType().Name -eq 'CBacnetScheduleObject'){ "TPP|$f|$($r.VariableName)|sym=$($p.TimeSymbol.ShowSymbol)" }
       elseif($r){ "W|$f|$(PinRef $r)|lines=$($p.ConnectedLines.Count)" }
       elseif($p.ConstValueSymbol -and $p.ConstValueSymbol.ShowSymbol){ "K|$f|$($o.PresentValue)" }
     }
     foreach($p in @($s.OutputPins)+@($s.HiddenOutputs)){ if(-not $p){ continue }; $o=$p.DataObject; if($p.MeasureSymbol.ShowSymbol -and $p.MeasureSymbol.DataObject){ "MSP|$($s.ComponentName).$($o.VariableName)|$($p.MeasureSymbol.DataObject.VariableName)" } } }
   foreach($c in (GF $d 'm_RuntimeComponents')){ foreach($o in (GF $c.ComponentData 'm_ObjectList')){ if($o.Hidden){ "H|$($c.VariableName).$($o.VariableName)" } } }
   foreach($o in (GF $d 'm_ObjectList')){ $tn=$o.GetType().Name
-    if($tn -match 'SetpointObject$'){ $an=HasF $o 'm_MinValue'; "SV|$($o.VariableName)|$tn|$($o.PresentValue)|$(if($an){$o.MinValue})|$(if($an){$o.MaxValue})|$(if($an){$o.UnitStr})|$(if($an){GF $o 'm_Desimals'})|$($o.DisplayName)" }
-    elseif($tn -match 'MeasureObject$'){ $an=HasF $o 'm_Desimals'; "MS|$($o.VariableName)|$tn|$(if($an){$o.UnitStr})|$(if($an){GF $o 'm_Desimals'})|$($o.DisplayName)" }
+    if($tn -match 'SetpointObject$'){ $an=HasF $o 'm_MinValue'; "SV|$($o.VariableName)|$tn|$($o.PresentValue)|$(if($an){$o.MinValue})|$(if($an){$o.MaxValue})|$(if($an){$o.UnitStr})|$(if($an){GF $o 'm_Desimals'})|$(ML-En $o.DisplayName)"; TXL $o; STL $o }
+    elseif($tn -match 'MeasureObject$'){ $an=HasF $o 'm_Desimals'; "MS|$($o.VariableName)|$tn|$(if($an){$o.UnitStr})|$(if($an){GF $o 'm_Desimals'})|$(ML-En $o.DisplayName)"; TXL $o; STL $o }
+    elseif($tn -eq 'CBacnetScheduleObject'){ TPL $o }
     elseif($tn -eq 'CBacnetSoftpointObject'){ $e=IfPin $cv $o.VariableName; $src=''; if($e -and $e.GetType().Name -eq 'EditorOutputPin'){ $src=PinRef $o.ParentObject }; "IP|$($o.VariableName)|$(if($e){$e.GetType().Name})|$($o.ValueType)|$src|$(if($e){[int]$e.Location.X})|$(if($e){[int]$e.Location.Y})" } }
   foreach($e in (Content $cv).Elements){ if($e.GetType().Name -eq 'EditorPropertypin' -and $e.GlobalPoint){ "GP|$($e.DataId)|$([int]$e.Location.X)|$([int]$e.Location.Y)|lines=$($e.ConnectedLines.Count)" } }
   foreach($o in (GF $d 'm_ObjectList')){ if($o.Global){ "G|$($o.VariableName)|$($o.GetType().Name)" } }
@@ -279,7 +324,7 @@ function IOC($cv,$name,$phys,$devType,$min,$max,$unit,$dec,$disp,$pol){ try { $u
   if($phys -and "$($u.PhysicalType)" -ne $phys){ $u.PhysicalType=$phys }
   if($devType -and "$($u.DeviceType.DeviceType)" -ne $devType){ $dt=$u.DeviceType; $dt.DeviceType=$devType; $u.DeviceType=$dt }
   if($pol){ $u.Polarity=$pol }; if($null -ne $min){ $u.MinPresentValue=$min }; if($null -ne $max){ $u.MaxPresentValue=$max }; if($unit){ $u.UnitStr=$unit }
-  if($null -ne $dec -and (HasF $u 'm_Desimals')){ SF $u 'm_Desimals' ([byte]$dec) }; if($disp){ $u.DisplayName.SetTextToAllLang($disp) }; $global:BS.add++ } catch { BFail "IOC $name" $_ } }
+  if($null -ne $dec -and (HasF $u 'm_Desimals')){ SF $u 'm_Desimals' ([byte]$dec) }; if($disp){ Set-ML $u.DisplayName $disp }; $global:BS.add++ } catch { BFail "IOC $name" $_ } }
 function IOP($cv,$name,$param,$v){ try { Set-DevParam $cv $name $param $v; $global:BS.add++ } catch { BFail "IOP $name.$param" $_ } }
 # import an application file at (x, $global:DevY); advances $global:DevY under it
 function IMP($cv,$name,$file,$x,$gap){ try { $s=Sym $cv $name
@@ -305,7 +350,7 @@ function Dump-Device($cv){ $d=DC $cv
   foreach($e in (Content $cv).Elements){ if($e.GetType().Name -eq 'EditorPhysicalOutputPin' -and $e.ConnectedLines.Count){ foreach($l in $e.ConnectedLines){ $sp=$l.StartPin; "DW|#$($e.DataObject.VariableName)|$($sp.DataObject.ParentDataComponent.TypeName).$($sp.DataObject.VariableName)|lines=$($e.ConnectedLines.Count)" } } }
   foreach($c in (GF $d 'm_RuntimeComponents')){ foreach($b in (GF $c.ComponentData 'm_RuntimeComponents')){ foreach($o in (GF $b.ComponentData 'm_ObjectList')){ if($o.GetType().Name -eq 'CBacnetSoftpointObject' -and $o.ReferenceGlobal){ $r=$o.ReferenceObject; "GL|$($c.VariableName)|$($b.VariableName).$($o.VariableName)|$($o.ReferenceGlobal)|$(if($r){ "$($r.ParentDataComponent.TypeName).$($r.VariableName)" })|$(if($r){ $r.Global })" } } } }
   foreach($e in (Content $cv).Elements){ if($e.GetType().Name -eq 'EditorPhysicalOutputPin'){ "MAN|$($e.DataObject.VariableName)|$($e.DataObject.ManualControlOn)" } }
-  foreach($e in (Content $cv).Elements){ if($e.GetType().Name -match '^EditorPhysical'){ $u=$e.DataObject; $dt=$u.DeviceType; "IO|$($u.VariableName)|$($u.PhysicalType)|$(if($dt){$dt.DeviceType})|$($u.MinPresentValue)|$($u.MaxPresentValue)|$($u.UnitStr)|$(if(HasF $u 'm_Desimals'){GF $u 'm_Desimals'})|$($u.Polarity)|$(if($dt){($dt.GetUIParams() | % { "$($_.Parameter)=$($_.Value)" }) -join ','})|$([int]$e.Location.X)|$([int]$e.Location.Y)|$($u.DisplayName)" } } }
+  foreach($e in (Content $cv).Elements){ if($e.GetType().Name -match '^EditorPhysical'){ $u=$e.DataObject; $dt=$u.DeviceType; "IO|$($u.VariableName)|$($u.PhysicalType)|$(if($dt){$dt.DeviceType})|$($u.MinPresentValue)|$($u.MaxPresentValue)|$($u.UnitStr)|$(if(HasF $u 'm_Desimals'){GF $u 'm_Desimals'})|$($u.Polarity)|$(if($dt){($dt.GetUIParams() | % { "$($_.Parameter)=$($_.Value)" }) -join ','})|$([int]$e.Location.X)|$([int]$e.Location.Y)|$(ML-En $u.DisplayName)" ; TXL $u } } }
 # Modbus register of a set value / measure (in application $app) or of a physical point ($app ''): MBR $cv app name reg fmt using
 function MBR($cv,$app,$name,$reg,$fmt,[bool]$using){ try { if($app){ $ad=AppData $cv $app; if(-not $ad){ throw "no application $app" }; $o=(GF $ad 'm_ObjectList') | ? { $_.VariableName -eq $name } | select -First 1 } else { $o=DevObj $cv $name }
   if(-not $o){ throw "no object $app/$name" }; $mi=$o.ModbusInterface; if(-not $mi){ throw "no ModbusInterface on $name (export once first)" }
@@ -338,7 +383,169 @@ function IL-Refs($m){ $b=$m.GetMethodBody(); if(-not $b){ return "no body" }; $i
       $out.Add(("{0:X4} {1} {2}" -f $at,$op.Name,$s)) }
     $i+=$sz }
   $out }
+# IL-Dump <MethodInfo>: every instruction with its operand (branch targets, locals, constants, references); write it to a file (ToFile) and copy it out
+function IL-Dump($m){ $b=$m.GetMethodBody(); if(-not $b){ return "no body" }; $il=$b.GetILAsByteArray(); $mod=$m.Module; [void](IL-Refs $m)
+  $out=[Collections.Generic.List[string]]::new(); $out.Add("LOCALS "+(($b.LocalVariables | % { "$($_.LocalIndex):$(TN $_.LocalType)" }) -join ' ')); $i=0
+  while($i -lt $il.Length){ $at=$i; $c=[int]$il[$i]; $i++; if($c -eq 0xFE){ $op=$global:__ops2[[int]$il[$i]]; $i++ } else { $op=$global:__ops1[$c] }
+    $ot=$op.OperandType.ToString(); $s=''
+    switch($ot){ 'InlineNone'{ } 'ShortInlineBrTarget'{ $s='-> {0:X4}' -f ($i+1+[int][sbyte]([int]$il[$i]-256*([int]$il[$i] -gt 127))); $i+=1 } 'InlineBrTarget'{ $s='-> {0:X4}' -f ($i+4+[BitConverter]::ToInt32($il,$i)); $i+=4 }
+      'ShortInlineI'{ $s="$([int]$il[$i]-256*([int]$il[$i] -gt 127))"; $i+=1 } 'ShortInlineVar'{ $s="$($il[$i])"; $i+=1 } 'InlineVar'{ $s="$([BitConverter]::ToUInt16($il,$i))"; $i+=2 }
+      'InlineI'{ $s="$([BitConverter]::ToInt32($il,$i))"; $i+=4 } 'InlineI8'{ $s="$([BitConverter]::ToInt64($il,$i))"; $i+=8 } 'InlineR'{ $s="$([BitConverter]::ToDouble($il,$i))"; $i+=8 } 'ShortInlineR'{ $s="$([BitConverter]::ToSingle($il,$i))"; $i+=4 }
+      'InlineSwitch'{ $n=[BitConverter]::ToInt32($il,$i); $base=$i+4+4*$n; $s='['+((0..($n-1) | % { '{0:X4}' -f ($base+[BitConverter]::ToInt32($il,$i+4+4*$_)) }) -join ',')+']'; $i=$base }
+      default { $tok=[BitConverter]::ToInt32($il,$i); $i+=4
+        try{ $s=switch($ot){ 'InlineMethod'{ $r=$mod.ResolveMethod($tok); $r.DeclaringType.Name+'.'+$r.Name+'/'+$r.GetParameters().Count } 'InlineField'{ $r=$mod.ResolveField($tok); $r.DeclaringType.Name+'.'+$r.Name } 'InlineType'{ $mod.ResolveType($tok).Name } 'InlineString'{ '"'+$mod.ResolveString($tok)+'"' } 'InlineTok'{ "$($mod.ResolveMember($tok).Name)" } default { "tok $tok" } } } catch { $s="?$tok" } } }
+    $out.Add(("{0:X4} {1} {2}" -f $at,$op.Name,$s)) }
+  foreach($h in $b.ExceptionHandlingClauses){ $out.Add(("EH {0} try {1:X4}+{2:X} handler {3:X4}+{4:X}" -f $h.Flags,$h.TryOffset,$h.TryLength,$h.HandlerOffset,$h.HandlerLength)) }
+  $out }
 function FindMethod($asm,$type,$name){ $t=([AppDomain]::CurrentDomain.GetAssemblies() | ? { $_.GetName().Name -eq $asm }).GetType($type); @($t.GetMethods($BFA -bor [Reflection.BindingFlags]::Static) | ? { $_.Name -eq $name }) }
+
+# ---- simulation: ApplicationDebugger.exe + virtual Ouflex C (proven 2026-11-24, see findings "Simulation") ----
+# Host the debugger on one application: hstart.sh dbg ApplicationDebugger.exe 'C:\...\APP.ouear' lang=en-GB
+# Load starts VirtualOuflexC.exe; Reset leaves the program HALTED (Run again, then write inputs).
+function DbgForm(){ $d=[System.Windows.Forms.Application]::OpenForms | ? { $_.GetType().Name -eq 'DebuggerForm' } | select -First 1; if(-not $d){ throw 'no DebuggerForm: hstart.sh dbg ApplicationDebugger.exe <app.ouear>' }; $d }
+function DbgCall($name){ $d=DbgForm; $d.GetType().GetMethod($name,$BFA).Invoke($d,[object[]]@($null,[EventArgs]::Empty)) | out-null }
+function Sim-State(){ "$(GF (DbgForm) 'm_ProgramState')" }
+function Sim-Objects(){ $l=GF (GF (DbgForm) 'm_LoadedApplication') 'm_ObjectList'; foreach($x in $l){ $x } }
+function Sim-Obj($name){ $o=Sim-Objects | ? { $_.VariableName -eq $name } | select -First 1; if(-not $o){ throw "no point $name" }; $o }
+# write = what the canvas "Set value" dialog does: set_PresentValue + CDeviceConnection.WriteProperty (inputs, set values)
+function Sim-Set($name,$value){ $d=DbgForm; $o=UW (Sim-Obj $name); $d.GetType().GetMethod('myCanvas1_OnObjectValueChanged',$BFA).Invoke($d,[object[]]@($o,'PresentValue',(InvStr $value))) | out-null; "SET|$name|$(InvStr $value)" }
+function Sim-Get([string[]]$names){ foreach($o in Sim-Objects){ $n=$o.VariableName; if($n -and (-not $names -or $names -contains $n)){ "VAL|$n|$(("$($o.PresentValue)") -replace ',','.')" } } }
+# the speed goes to the device on a text change only, and a (re)load starts the device at 1: change it twice so it is applied
+function Sim-Factor($x){ $cb=GF (DbgForm) 'toolStripComboBoxTickTimerFactor'; $v=(InvStr $x); $cb.Text=$(if($v -eq '1'){'2'}else{'1'}); $cb.Text=$v; "FACTOR|$($cb.Text)" }
+function Sim-Log(){ ((GF (DbgForm) 'richTextBox1').Text -replace '\r?\n',' / ') }
+function Sim-Load(){ DbgCall 'loadButton_Click'; "LOAD|$(Sim-Log)" }
+function Sim-Wait($want,[int]$ms=8000){ $t0=[DateTime]::Now; while(((Sim-State) -notmatch $want) -and ([DateTime]::Now-$t0).TotalMilliseconds -lt $ms){ [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 100 }; Sim-State }
+# Reset is asynchronous (RUNNING for a moment, then HALTED); Run is a toggle, so press it only when not RUNNING and wait for RUNNING
+function Sim-Run(){ if((Sim-State) -ne 'RUNNING'){ DbgCall 'runButton_Click' }; $s=Sim-Wait '^RUNNING$'; if($s -ne 'RUNNING'){ throw "Sim-Run: state $s" }; "STATE|$s" }
+# time program in the simulator: the virtual device evaluates it from the Windows clock only when the program starts, and a written
+# value is not taken. Sim-Week rewrites the loaded application's week (7 days 'HH:MM=v,...', Monday first) and loads again.
+function Sim-Week($name,[string[]]$week){ $o=UW (Sim-Obj $name); if($o.GetType().Name -ne 'CBacnetScheduleObject'){ throw "$name is not a time program" }
+  TP-SetWeek $o $week "$(GF $o 'm_TimeProgramType')"; "WEEK|$name|$(TP-Week $o)"; Sim-Load }
+function Sim-Reset(){ DbgCall 'resetButton_Click'; $s=Sim-Wait '^(HALTED|IDLE|WAITING)$'; "STATE|$s" }
+
+# ---- local HMI (row display) menu, ProjectManager page 1 "Local HMI / SMS" (proven 2026-11-24, see findings "Local HMI") ----
+# Paths name menus by their text in ANY language ('Heating circuit 1/Settings'); '' = main level. Source rows are found by
+# point name (or curve block name) under the application, so nothing depends on the project's document language.
+function Hmi-Ui(){ Show-Page 1; $ui=FindCtl $form 'CommonUIConfig' | select -First 1; if(-not $ui){ throw 'no Local HMI page (project open?)' }
+  $lt=GF $ui 'multitreeLocalUi'; if(-not $lt.Parent){ (GF $ui 'splitContainer4').Panel1.Controls.Add($lt); $lt.Dock='Fill' }; $ui }  # the hosted tool can leave the tree detached
+function Hmi-Name($it){ "$($it.DisplayName)" }
+function Hmi-Has($it,[string]$name){ if((Hmi-Name $it) -eq $name){ return $true }; $d=GF $it 'm_DisplayName'; if($d){ foreach($v in (GF $d 'm_Strings').Values){ if($v -eq $name){ return $true } } }; $false }
+function Hmi-Sub($it){ $r=GF $it 'm_ObjectPropertyRef'; if($r -and $r.BacnetObject -and $r.BacnetObject.GetType().Name -eq 'CSVObject'){ ,$r.BacnetObject } }
+function Hmi-Obj($it){ $r=GF $it 'm_ObjectPropertyRef'; if($r -and $r.BacnetObject -and $r.BacnetObject.GetType().Name -ne 'CSVObject'){ ,$r.BacnetObject } }
+function Hmi-Items($menu){ foreach($x in (GF $menu 'm_SubOrdinateList')){ $x } }
+function Hmi-Menu($ui,[string]$path){ $m=GF $ui 'm_LocalMenu'; foreach($p in ($path -split '/')){ if(-not $p){ continue }
+    $it=Hmi-Items $m | ? { Hmi-Has $_ $p } | select -First 1; if(-not $it){ throw "no menu '$p' in '$path'" }; $m=Hmi-Sub $it; if(-not $m){ throw "'$p' is not a menu" } }; ,$m }
+function Hmi-TNode($nodes,$tag){ foreach($n in $nodes){ if([object]::ReferenceEquals($n.Tag,$tag)){ return ,$n }; $r=Hmi-TNode $n.Nodes $tag; if($r){ return ,$r } } }
+function Hmi-Nodes($ui,$menu){ $lt=GF $ui 'multitreeLocalUi'; $menu=UW $menu; if([object]::ReferenceEquals($menu,(UW (GF $ui 'm_LocalMenu')))){ return ,$lt.Nodes }
+  $n=Hmi-TNode $lt.Nodes (UW (GF $menu 'm_ParentDispItem')); if(-not $n){ throw 'menu not in the tree' }; ,$n.Nodes }
+function Hmi-Refresh($ui){ foreach($m in 'updateLocalTreeView','reloadMenusToVirtualUI'){ try { CM $ui $m $null | out-null } catch {} }; Mark-Modified }
+function Hmi-MLS(){ if(-not $global:__mlsT){ $global:__mlsT=[AppDomain]::CurrentDomain.GetAssemblies() | % { $_.GetType('OuFlex.Common.CMultilangString') } | ? { $_ } | select -First 1 }; [Activator]::CreateInstance($global:__mlsT) }
+# own text of a menu row/folder: $tx = string (all languages) or @{'en-GB'=..;'fi-FI'=..;'sv-SE'=..} (see Set-ML)
+function Hmi-Text($it,$tx){ if(-not $tx){ return }; $m=Hmi-MLS; Set-ML $m $tx; $it.DisplayNameConfig='OwnName'; $it.DisplayName=$m }
+function Hmi-Src($ui,[string]$app,[string]$key){ $src=GF $ui 'multiselectTreeView'; $an=@($src.Nodes) | ? { $_.Text -eq $app -or (Hmi-Has $_.Tag $app) } | select -First 1
+  if(-not $an){ throw "no application $app in the generated HMI" }
+  $f={ param($nodes) foreach($n in $nodes){ $o=Hmi-Obj $n.Tag; if(($o -and $o.VariableName -eq $key) -or ("$(GF $n.Tag 'm_MenuType')" -eq 'CurveView' -and (Hmi-Has $n.Tag $key))){ return ,$n }; $r=& $f $n.Nodes; if($r){ return ,$r } } }
+  $n=& $f $an.Nodes; if(-not $n){ throw "no row $key under $app" }; ,$n }
+# HF <parent path> <text>: folder (submenu); HD <parent path> <app> <point|curve block> [text]: drop a generated row there and give it
+# its own text. Paths name menus by their text in any language. HST <app> <point> <off text> <on text>: state texts of a binary point
+# (object level: display and Web UI). Texts: string or language hashtable (Set-ML).
+function HF([string]$parent,$tx){ try { $ui=Hmi-Ui; $m=Hmi-Menu $ui $parent; $b=ML-Base $tx
+    if(Hmi-Items $m | ? { Hmi-Has $_ $b }){ $global:BS.skip++; return }
+    $asm=$m.GetType().Assembly; $it=[Activator]::CreateInstance($asm.GetType('OuFlexTool.ApplicationBuilder.Data.BacnetObjectClasses.UIConfig.CDisplayItem'))
+    $it.AllowUserAddRemoveSubMenus=$true; $it.Protected=$false; $it.ObjectPropertyRef.BacnetObject=[Activator]::CreateInstance($m.GetType())
+    CM $m 'CreateMenuItem' (,$it) | out-null; Hmi-Text $it $tx; Hmi-Refresh $ui; $global:BS.add++ } catch { BFail "HF $parent/$(ML-Base $tx)" $_ } }
+function HD([string]$parent,[string]$app,[string]$key,$tx){ try { $ui=Hmi-Ui; $m=Hmi-Menu $ui $parent; $b=ML-Base $tx
+    if(Hmi-Items $m | ? { $o=Hmi-Obj $_; ($o -and $o.VariableName -eq $key) -or ($b -and (Hmi-Has $_ $b)) }){ $global:BS.skip++; return }
+    $sn=Hmi-Src $ui $app $key; $a=New-Object object[] 4; $a[0]=(UW $sn); $a[1]=(Hmi-Nodes $ui $m); $a[2]=(UW $m); $a[3]=$true
+    $tn=$ui.GetType().GetMethod('HandleDropFromGeneratedUi',$BFA).Invoke($ui,$a); if(-not $tn){ throw 'drop returned nothing' }
+    Hmi-Text $tn.Tag $tx; Hmi-Refresh $ui; $global:BS.add++ } catch { BFail "HD $parent <- $app/$key" $_ } }
+function Hmi-Remove([string]$path){ $ui=Hmi-Ui; $parts=$path -split '/'; $par=if($parts.Count -gt 1){ ($parts[0..($parts.Count-2)]) -join '/' }else{ '' }; $m=Hmi-Menu $ui $par; $it=Hmi-Items $m | ? { Hmi-Has $_ $parts[-1] } | select -First 1
+  if(-not $it){ return "HMI|no $path" }; $m.RemoveMenuItem($it) | out-null; Hmi-Refresh $ui; "HMI|removed $path" }
+function HST([string]$app,[string]$var,$off,$on){ try { Show-Page 0; $cv=TopCanvas; $ad=AppData $cv $app; if(-not $ad){ throw "no application $app" }
+    $o=(GF $ad 'm_ObjectList') | ? { $_.VariableName -eq $var } | select -First 1; if(-not $o){ throw "no point $var" }; if(-not (HasF $o 'm_ActiveText')){ throw "$var is not binary" }
+    $na=Hmi-MLS; Set-ML $na $off; $nb=Hmi-MLS; Set-ML $nb $on
+    if((ML-Str (GF $o 'm_InactiveText')) -eq (ML-Str $na) -and (ML-Str (GF $o 'm_ActiveText')) -eq (ML-Str $nb)){ $global:BS.skip++; return }
+    SF $o 'm_InactiveText' $na; SF $o 'm_ActiveText' $nb; Mark-Modified; $global:BS.add++ } catch { BFail "HST $app/$var" $_ } }
+# Dump-Hmi: HMI|depth|kind|object|text (en-GB)|all languages (lang=text^..., own texts only)|state texts (binary rows: lang=off/on^...)
+# kind: sys (protected main menu, not expanded), menu, curve, cpt (curve point), row
+function Dump-Hmi(){ $ui=Hmi-Ui; $s={ param($menu,$d,$inCurve) foreach($it in (Hmi-Items $menu)){ $sub=Hmi-Sub $it; $o=Hmi-Obj $it; $mt="$(GF $it 'm_MenuType')"
+      $own="$(GF $it 'm_DisplayNameConfig')" -eq 'OwnName'; $dn=GF $it 'm_DisplayName'
+      if($d -eq 0 -and (GF $it 'm_Protected')){ "HMI|0|sys||$(Hmi-Name $it)||"; continue }
+      $k=if($mt -eq 'CurveView'){ 'curve' } elseif($sub){ 'menu' } elseif($inCurve){ 'cpt' } else { 'row' }
+      $en=if($own -and $dn){ (GF $dn 'm_Strings')['en-GB'] }else{ '' }
+      "HMI|$d|$k|$(if($o){$o.VariableName})|$en|$(if($own){ ML-Str $dn })|$(if($o -and $k -eq 'row'){ (STL $o) -replace '^ST\|[^|]*\|','' })"
+      if($sub){ & $s $sub ($d+1) ($k -eq 'curve') } } }
+  & $s (GF $ui 'm_LocalMenu') 0 $false }
+# ---- Web UI pages (ProjectManager "Web UI configuration" charts), proven 2026-11-24, see findings "Web UI" ----
+# A page is the chart JSON the device's web UI draws; it lives in the project as COuman6000.ChartData[name]. Links name points
+# like the web UI: physical "UI 4"/"AO 1"/"R1", application "C1.C1_SP". The page's link registry (object ids) is filled from the
+# project here, so a page file needs links only.
+function Web-Json(){ if(-not ('Newtonsoft.Json.Linq.JObject' -as [type])){ $dir=Split-Path ((([AppDomain]::CurrentDomain.GetAssemblies() | ? { $_.GetName().Name -eq 'ProjectManager' }) | select -First 1).Location); [void][Reflection.Assembly]::LoadFrom("$dir\Newtonsoft.Json.dll") } }   # loaded by the tool only once the Web UI page was opened
+function Web-Dev(){ foreach($f in (GF (Cfg) 'm_ConfigForms').Values){ if($f -and (HasF $f 'm_CurrentDevice')){ $d=GF $f 'm_CurrentDevice'; if($d -and ($d.GetType().GetProperty('ChartData'))){
+        if($null -eq $d.ChartData){ $d.ChartData=New-Object 'System.Collections.Generic.Dictionary[string,string]' }   # a project without pages has none yet
+        return ,$d } } }; throw 'no device with charts (project open?)' }
+function Web-Obj($ref){ Show-Page 0; $cv=TopCanvas; if($ref.Contains('.')){ $a,$p=$ref.Split('.',2); $ad=AppData $cv $a; if(-not $ad){ return $null }; ,((GF $ad 'm_ObjectList') | ? { $_.VariableName -eq $p } | select -First 1) } else { ,(DevObj $cv $ref) } }
+function Web-Entry($ref){ $o=Web-Obj $ref; if(-not $o){ return $null }; $tn=$o.GetType().Name
+  $type=if($tn -match 'SetpointObject$'){ 'Setvalue' } elseif($tn -match 'MeasureObject$'){ 'Measure' } elseif($tn -eq 'CBacnetScheduleObject'){ 'Timeprogram' } else { 'PhysicalPoint' }   # Timeprogram: as the vendor page AHU301 (objectType 17, pointId .TP)
+  $suf=switch -regex ($ref){ '\.' { if($type -eq 'Setvalue'){ '.SP' } elseif($type -eq 'Timeprogram'){ '.TP' } else { '.M' }; break } '^AO' { '.C'; break } '^(R|TR) ?\d' { '.S'; break } '^(DI|PFI)' { '.I'; break } default { '.M' } }
+  $e=[Newtonsoft.Json.Linq.JObject]::new(); $S={ param($v) ,([Newtonsoft.Json.Linq.JValue]::CreateString("$v")) }   # a plain string would go through JToken.Parse; ',' or PowerShell unrolls the JToken
+  $e.Add('type',(& $S $type)); $e.Add('objectType',[Newtonsoft.Json.Linq.JValue]::new([long][int]$o.ObjectType)); $e.Add('id',(& $S $o.ObjectIdentifier))
+  $e.Add('pId',[Newtonsoft.Json.Linq.JValue]::new([long]85)); $e.Add('deviceId',[Newtonsoft.Json.Linq.JValue]::new([long]255)); $e.Add('pointId',(& $S "$($o.VariableName)$suf"))
+  $e.Add('technicalName',(& $S $ref)); $e.Add('uId',(& $S $ref)); $e.Add('displayName',(& $S $o.DisplayName)); $e.Add('allowManualControl',[Newtonsoft.Json.Linq.JValue]::new([bool]($type -notin 'Setvalue','Timeprogram'))); ,$e }
+function Web-Links($j){ $l=[System.Collections.Generic.List[string]]::new(); foreach($p in @($j.SelectToken('component.components').Properties())){ $a=$p.Value.SelectToken('links'); if($a){ for($i=0;$i -lt $a.Count;$i++){ $s=$a[$i].ToString(); if($s -and -not $l.Contains($s)){ $l.Add($s) } } } }; ,$l }
+# WEBP <page name> <json file (Windows path)>: put the page into the project (replaces a page of that name), registry filled from the project
+function WEBP([string]$name,[string]$file){ try { Web-Json; $j=[Newtonsoft.Json.Linq.JObject]::Parse([IO.File]::ReadAllText($file,[Text.Encoding]::UTF8))
+    $reg=[Newtonsoft.Json.Linq.JObject]::new(); $ids=[Newtonsoft.Json.Linq.JArray]::new(); $miss=@()
+    foreach($r in (Web-Links $j)){ $e=Web-Entry $r; if($e){ $reg.Add($r,$e); $ids.Add([Newtonsoft.Json.Linq.JValue]::CreateString($r)) } else { $miss+=$r } }
+    if($miss){ throw "no such point(s): $($miss -join ', ')" }
+    $lk=[Newtonsoft.Json.Linq.JObject]::new(); $lk.Add('allIds',$ids); $lk.Add('links',$reg); $j.Remove('link') | out-null; $j.Add('link',$lk)
+    $txt=$j.ToString([Newtonsoft.Json.Formatting]::None); $d=Web-Dev
+    if($d.ChartData.ContainsKey($name) -and $d.ChartData[$name] -eq $txt){ $global:BS.skip++; return }
+    $d.ChartData.Remove($name) | out-null; $d.AddChart($name,$txt,$true) | out-null; Mark-Modified; $global:BS.add++ } catch { BFail "WEBP $name" $_ } }
+# Dump-Web: WEB|page|components|links ; WL|page|link|registry id|object id now|type   (registry id = object id: the link resolves)
+function Dump-Web(){ Web-Json; $d=Web-Dev; foreach($k in @($d.ChartData.Keys)){ if($k -eq 'OumanTrend'){ continue }; $j=[Newtonsoft.Json.Linq.JObject]::Parse($d.ChartData[$k]); $reg=$j.SelectToken('link.links'); $ls=Web-Links $j
+    "WEB|$k|$(@($j.SelectToken('component.components').Properties()).Count)|$($ls.Count)"
+    foreach($r in $ls){ $e=$reg.SelectToken("['$r']"); $o=Web-Obj $r; "WL|$k|$r|$(if($e){$e.SelectToken('id').ToString()})|$(if($o){$o.ObjectIdentifier})|$(if($e){$e.SelectToken('type').ToString()})" } } }
+# ---- Trends (proven 2026-11-24, see findings "Trends") ----
+# The device has 200 trend logs (CTrendObject Trend_1..200; the first ones preassigned to the physical points). A log is in use when its
+# reference (the point's FullVariableName: "UI 4", "C1.C1_SP") resolves and that point has TrendLogEnabled. Groups for the web UI's
+# trend view are the JSON array ChartData["OumanTrend"] (at most 30 points per group, one graph per y axis).
+function Trend-Logs($cv){ foreach($x in (GF (DC $cv) 'm_ObjectList')){ if($x.GetType().Name -eq 'CTrendObject'){ $x } } }
+function Trend-Ref($ref){ $o=Web-Obj $ref; if(-not $o){ throw "no point $ref" }; $o }
+# TRD <point> <interval s> <log length>: a trend log on the point (reuses the one already pointing at it); returns nothing, counts add/skip
+function TRD([string]$ref,[int]$interval,[int]$length){ try { $o=Trend-Ref $ref; Show-Page 0; $cv=TopCanvas; $full="$($o.FullVariableName)"; if(-not $full){ $full=$o.VariableName }
+    $log=Trend-Logs $cv | ? { "$(GF $_ 'm_TrendRefObjectVariableName')" -eq $full } | select -First 1
+    $same=$log -and $o.TrendLogEnabled -and (GF $log 'm_TrendLogEnabled') -and (GF $log 'm_TrendSampleInterval') -eq $interval -and (GF $log 'm_TrendLogBufferSize') -eq $length
+    if($same){ $global:BS.skip++; return }
+    if(-not $log){ $log=Trend-Logs $cv | ? { $_.IsFree } | select -First 1; if(-not $log){ throw 'no free trend log (200 in use)' } }
+    $o.TrendLogEnabled=$true; SF $o 'm_TrendSampleInterval' ([uint16]$interval); SF $o 'm_TrendLogBufferSize' $length
+    SF $log 'm_TrendRefObjectVariableName' $full; SF $log 'm_TrendLogEnabled' $true; SF $log 'm_TrendSampleInterval' ([uint16]$interval); SF $log 'm_TrendLogBufferSize' $length
+    if($log.IsFree){ throw "trend log for $full did not take" }; Mark-Modified; $global:BS.add++ } catch { BFail "TRD $ref" $_ } }
+function Trend-LogOf($cv,$ref){ $o=Trend-Ref $ref; $full="$($o.FullVariableName)"; if(-not $full){ $full=$o.VariableName }; Trend-Logs $cv | ? { "$(GF $_ 'm_TrendRefObjectVariableName')" -eq $full -and -not $_.IsFree } | select -First 1 }
+# TGRP <group name> <axes>: axes = @( @{name='°C'; points=@('UI 4','C1.C1_SP')}, @{name='%'; points=@('C1.C1_VALVE')} ); replaces a group of that name
+function TGRP([string]$name,$axes){ try { Web-Json; Show-Page 0; $cv=TopCanvas; $d=Web-Dev; $J=[Newtonsoft.Json.Linq.JObject]; $V={ param($v) ,([Newtonsoft.Json.Linq.JValue]::CreateString("$v")) }
+    if($d.ChartData.ContainsKey('OumanTrend') -and $d.ChartData['OumanTrend']){ $arr=[Newtonsoft.Json.Linq.JArray]::Parse($d.ChartData['OumanTrend']) } else { $arr=[Newtonsoft.Json.Linq.JArray]::new() }   # not $arr=if(..): PowerShell unrolls an empty JArray to $null
+    $g=$J::new(); $g.Add('uid',(& $V ("dh"+[guid]::NewGuid().ToString('N').Substring(0,12)))); $g.Add('name',(& $V $name))
+    $data=[Newtonsoft.Json.Linq.JArray]::new(); $graphs=[Newtonsoft.Json.Linq.JArray]::new(); $n=0; $ai=0; $pos=@(@('left',0),@('right',0),@('left',50),@('right',50))
+    foreach($ax in $axes){ $ids=[Newtonsoft.Json.Linq.JArray]::new()
+      foreach($r in $ax.points){ $o=Trend-Ref $r; $log=Trend-LogOf $cv $r; if(-not $log){ throw "no trend log on $r (TRD first)" }; $n++
+        $e=$J::new(); $e.Add('id',[Newtonsoft.Json.Linq.JValue]::new([long]$log.ObjectIdentifier)); $e.Add('name',(& $V $o.DisplayName)); $e.Add('color',(& $V ''))
+        $e.Add('technicalName',(& $V $r)); $e.Add('pointId',(& $V ("$($o.VariableName)" + $(if($r.Contains('.')){ if($o.GetType().Name -match 'Setpoint'){'.SP'}else{'.M'} } elseif($r -match '^AO'){'.C'} elseif($r -match '^(R|TR) ?\d'){'.S'} elseif($r -match '^(DI|PFI)'){'.I'} else {'.M'}))))
+        $data.Add($e); $ids.Add([Newtonsoft.Json.Linq.JValue]::new([long]$log.ObjectIdentifier)) }
+      $y=$J::new(); $y.Add('id',(& $V "yAxis-$($ai+1)")); $y.Add('name',(& $V $ax.name)); $y.Add('position',(& $V $pos[$ai % 4][0])); $y.Add('offset',[Newtonsoft.Json.Linq.JValue]::new([long]$pos[$ai % 4][1])); $y.Add('min',(& $V '')); $y.Add('max',(& $V ''))
+      $gr=$J::new(); $gr.Add('type',(& $V 'line')); $gr.Add('data',$ids); $gr.Add('yAxis',$y); $gr.Add('enabled',[Newtonsoft.Json.Linq.JValue]::new($true)); $graphs.Add($gr); $ai++ }
+    if($n -gt 30){ throw "$n points: a group takes at most 30" }
+    $g.Add('data',$data); $g.Add('graphs',$graphs)
+    $old=@($arr | ? { $_.SelectToken('name').ToString() -eq $name }); if($old){ $g['uid']=$old[0].SelectToken('uid'); foreach($x in $old){ $x.Remove() } }
+    $arr.Add($g); $txt=$arr.ToString([Newtonsoft.Json.Formatting]::None)
+    if($d.ChartData.ContainsKey('OumanTrend') -and $d.ChartData['OumanTrend'] -eq $txt){ $global:BS.skip++; return }
+    $d.ChartData['OumanTrend']=$txt; Mark-Modified; $global:BS.add++ } catch { BFail "TGRP $name" $_ } }
+# Dump-Trend: TL|log|id|ref|interval|length|enabled|point trend on   (logs in use) ; TG|group|axis|technicalName|log id|log ref now
+function Dump-Trend(){ Web-Json; Show-Page 0; $cv=TopCanvas
+  foreach($l in (Trend-Logs $cv)){ if(-not $l.IsFree){ $r="$(GF $l 'm_TrendRefObjectVariableName')"; $o=Web-Obj $r; "TL|$($l.VariableName)|$($l.ObjectIdentifier)|$r|$(GF $l 'm_TrendSampleInterval')|$(GF $l 'm_TrendLogBufferSize')|$(GF $l 'm_TrendLogEnabled')|$(if($o){$o.TrendLogEnabled})" } }
+  $d=Web-Dev; if($d.ChartData.ContainsKey('OumanTrend')){ $byId=@{}; foreach($l in (Trend-Logs $cv)){ $byId["$($l.ObjectIdentifier)"]=$l }
+    foreach($g in [Newtonsoft.Json.Linq.JArray]::Parse($d.ChartData['OumanTrend'])){ $gn=$g.SelectToken('name').ToString(); $names=@{}; foreach($e in $g.SelectToken('data')){ $names[$e.SelectToken('id').ToString()]=$e.SelectToken('technicalName').ToString() }
+      foreach($gr in $g.SelectToken('graphs')){ $an=$gr.SelectToken('yAxis.name').ToString(); foreach($i in $gr.SelectToken('data')){ $id=$i.ToString(); $l=$byId[$id]; "TG|$gn|$an|$($names[$id])|$id|$(if($l -and -not $l.IsFree){ GF $l 'm_TrendRefObjectVariableName' })" } } } } }
 
 # ==== new project by code (Project > New project and the dialogs that follow) ====
 # The dialogs are modal, but the host keeps running scripts inside their message loop, so each step is its own hrun:

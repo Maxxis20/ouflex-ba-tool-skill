@@ -10,6 +10,7 @@
 #   FMS|app|name|type|unit|decimals ; FMSP|app|block.pin|measure (from the measure's ParentObject)
 #   FIP|app|name|In/Out|valuetype
 #   FGL|app|dst block.pin|global name|object it resolved to in the file (app.name)
+#   FTPP|app|block.pin|time program ; FTP|app|name|type|default|week (Monday..Sunday 'HH:MM=v,...' joined by ';')
 $proj = if($PROJ){ $PROJ } elseif($env:PROJ){ $env:PROJ } else { throw 'projdump: set $PROJ to the project folder' }
 $dumpout = if($DUMPOUT){ $DUMPOUT } else { Join-Path $proj 'file.dump.txt' }
 $dev = Load-Bin "$proj\Devices\Device1\Device.bin"
@@ -26,6 +27,9 @@ foreach($a in (GF $top 'm_RuntimeComponents')){ $ad=$a.ComponentData; $an=$a.Var
     if($tn -match 'SetpointObject$'){ $an2=$tn -eq 'CAnalogSetpointObject'; $out.Add("FSV|$an|$($o.VariableName)|$tn|$($o.PresentValue)|$(if($an2){$o.MinValue})|$(if($an2){$o.MaxValue})|$(if($an2){$o.UnitStr})|$(if($an2){Fld $o 'm_Desimals'})") }
     elseif($tn -match 'MeasureObject$'){ $an2=$tn -eq 'CAnalogMeasureObject'; $out.Add("FMS|$an|$($o.VariableName)|$tn|$(if($an2){$o.UnitStr})|$(if($an2){Fld $o 'm_Desimals'})")
       $po=$o.ParentObject; if($po){ $out.Add("FMSP|$an|$(($po.FullVariableName) -replace "^$an\.",'')|$($o.VariableName)") } }
+    elseif($tn -eq 'CBacnetScheduleObject'){ $d=GF (GF $o 'm_WeeklySchedule') 'm_WeeklySchedule'
+      $wk=(0..6 | % { ((GF $d[$_] 'm_TimeValues') | % { $t=$_.Time; $v=$_.Value; '{0:D2}:{1:D2}={2}' -f [int]$t.Hour,[int]$t.Minute,$(if($v.ValueType -eq 8){ [Convert]::ToString($v.FloatValue,[Globalization.CultureInfo]::InvariantCulture) } else { $v.U32Value }) }) -join ',' }) -join ';'
+      $out.Add("FTP|$an|$($o.VariableName)|$(GF $o 'm_TimeProgramType')|$(GF $o 'm_DefaultValue')|$wk") }
     elseif($tn -eq 'CBacnetSoftpointObject'){ $r=$o.ReferenceObject; $out.Add("FIP|$an|$($o.VariableName)|$($o.IoType)|$($o.ValueType)|$(if("$($o.IoType)" -eq 'Input'){ Ref $r '' })") } }
   foreach($c in (GF $ad 'm_RuntimeComponents')){ $pd=$c.ComponentData; $bn=$c.VariableName
     $out.Add("FB|$an|$bn|$($c.LibraryFullName)|$($c.LibraryItemVersion)|$($c.ExecutionOrder)")
@@ -34,6 +38,7 @@ foreach($a in (GF $top 'm_RuntimeComponents')){ $ad=$a.ComponentData; $an=$a.Var
         $rg=$null; try { $rg=$p.ReferenceGlobal } catch {}
         if($rg){ $out.Add("FW|$an|$f|%$rg"); $out.Add("FGL|$an|$f|$rg|$(if($r){ Ref $r '' })") }
         elseif($r -and $r.GetType().Name -match 'SetpointObject$'){ $out.Add("FSVP|$an|$f|$($r.VariableName)") }
+        elseif($r -and $r.GetType().Name -eq 'CBacnetScheduleObject'){ $out.Add("FTPP|$an|$f|$($r.VariableName)") }
         elseif($r){ $out.Add("FW|$an|$f|$(Ref $r $an)") }
         elseif("$($p.State)" -eq 'Active'){ $out.Add("FK|$an|$f|$($p.PresentValue)") } }
       } } }   # measurements are found from their ParentObject above: an output feeding two objects keeps no ReferenceObject in the file
