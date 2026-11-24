@@ -1,0 +1,1124 @@
+{
+ "surface": {
+  "name": "",
+  "props": {
+   "background": "#ffffff",
+   "backgroundImage": "",
+   "gridSize": 15,
+   "gridThreshold": 15,
+   "width": 1800,
+   "height": 950
+  }
+ },
+ "component": {
+  "selected": [],
+  "allIds": [
+   "Triangle-dh2001",
+   "Triangle-dh2002",
+   "Pipe-dh2003",
+   "Pipe-dh2004",
+   "Text-dh2005",
+   "Measurement-dh2006",
+   "Measurement-dh2007",
+   "Alarm-dh2008",
+   "Outdoor wall-dh2009",
+   "Measurement-dh2010",
+   "Pipe-dh2011",
+   "Pipe-dh2012",
+   "Two way valve-dh2013",
+   "Adjust-dh2014",
+   "Heat exchanger-dh2015",
+   "Pipe-dh2016",
+   "Pipe-dh2017",
+   "Pump-dh2018",
+   "Indication-dh2019",
+   "Control-dh2020",
+   "Circuit-dh2021",
+   "Text-dh2022",
+   "Heating curve-dh2023",
+   "Measurement-dh2024",
+   "Measurement-dh2025",
+   "Setting-dh2026",
+   "Setting icon-dh2027",
+   "Time program-dh2028",
+   "Alarm-dh2029",
+   "Two way valve-dh2030",
+   "Adjust-dh2031",
+   "Heat exchanger-dh2032",
+   "Pipe-dh2033",
+   "Pipe-dh2034",
+   "Pump-dh2035",
+   "Indication-dh2036",
+   "Control-dh2037",
+   "Circuit-dh2038",
+   "Text-dh2039",
+   "Heating curve-dh2040",
+   "Measurement-dh2041",
+   "Measurement-dh2042",
+   "Setting-dh2043",
+   "Setting icon-dh2044",
+   "Time program-dh2045",
+   "Alarm-dh2046"
+  ],
+  "components": {
+   "Triangle-dh2001": {
+    "id": "Triangle-dh2001",
+    "type": "Triangle",
+    "props": {
+     "x": 30,
+     "y": 98,
+     "internalLink": "",
+     "rotation": 90,
+     "width": 45,
+     "height": 45,
+     "background": "rgba(245,100,100,1)",
+     "border": "rgba(245,100,100,1)"
+    },
+    "links": [],
+    "states": {}
+   },
+   "Triangle-dh2002": {
+    "id": "Triangle-dh2002",
+    "type": "Triangle",
+    "props": {
+     "x": 29,
+     "y": 832,
+     "internalLink": "",
+     "rotation": 270,
+     "width": 45,
+     "height": 45,
+     "background": "rgba(36,180,255,1)",
+     "border": "rgba(36,180,255,1)"
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2003": {
+    "id": "Pipe-dh2003",
+    "type": "Pipe",
+    "props": {
+     "color": "#ff2424",
+     "thickness": 20,
+     "points": [
+      [
+       45,
+       120
+      ],
+      [
+       950,
+       120
+      ],
+      [
+       950,
+       465
+      ],
+      [
+       1010,
+       465
+      ]
+     ],
+     "x": 45,
+     "y": 120
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2004": {
+    "id": "Pipe-dh2004",
+    "type": "Pipe",
+    "props": {
+     "color": "#24B4FF",
+     "thickness": 20,
+     "points": [
+      [
+       995,
+       585
+      ],
+      [
+       900,
+       585
+      ],
+      [
+       900,
+       855
+      ],
+      [
+       45,
+       855
+      ]
+     ],
+     "x": 995,
+     "y": 585
+    },
+    "links": [],
+    "states": {}
+   },
+   "Text-dh2005": {
+    "id": "Text-dh2005",
+    "type": "Text",
+    "props": {
+     "x": 75,
+     "y": 20,
+     "internalLink": "",
+     "rotation": 0,
+     "text": {
+      "en": "District heating",
+      "fi": "Kaukolämpö",
+      "sv": "Fjärrvärme"
+     },
+     "font": 0,
+     "fontSize": 26,
+     "fontColor": "#000000",
+     "padding": 0,
+     "verticalAlignment": 0,
+     "horizontalAlignment": 0,
+     "fill": "rgba(0,0,0,0)",
+     "stroke": "rgba(0,0,0,0)",
+     "width": 90,
+     "height": 45
+    },
+    "links": [],
+    "states": {}
+   },
+   "Measurement-dh2006": {
+    "id": "Measurement-dh2006",
+    "type": "Measurement",
+    "props": {
+     "x": 120,
+     "y": 150,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "UI 2"
+    ],
+    "states": {
+     "displayValue": "UI 2"
+    }
+   },
+   "Measurement-dh2007": {
+    "id": "Measurement-dh2007",
+    "type": "Measurement",
+    "props": {
+     "x": 120,
+     "y": 885,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "UI 3"
+    ],
+    "states": {
+     "displayValue": "UI 3"
+    }
+   },
+   "Alarm-dh2008": {
+    "id": "Alarm-dh2008",
+    "type": "Alarm",
+    "props": {
+     "x": 60,
+     "y": 300,
+     "internalLink": "",
+     "rotation": 0,
+     "size": 45
+    },
+    "links": [
+     "ALARM.ALARM_SUM"
+    ],
+    "states": {}
+   },
+   "Outdoor wall-dh2009": {
+    "id": "Outdoor wall-dh2009",
+    "type": "Outdoor wall",
+    "props": {
+     "x": 1590,
+     "y": 2,
+     "internalLink": "",
+     "rotation": 180,
+     "width": 50,
+     "height": 210
+    },
+    "links": [],
+    "states": {}
+   },
+   "Measurement-dh2010": {
+    "id": "Measurement-dh2010",
+    "type": "Measurement",
+    "props": {
+     "x": 1650,
+     "y": 75,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "COMMON.TOUT_F",
+     "COMMON.TOUT_FAULT"
+    ],
+    "states": {
+     "displayValue": "COMMON.TOUT_F",
+     "alarm": "COMMON.TOUT_FAULT"
+    }
+   },
+   "Pipe-dh2011": {
+    "id": "Pipe-dh2011",
+    "type": "Pipe",
+    "props": {
+     "color": "#ff2424",
+     "thickness": 20,
+     "points": [
+      [
+       300,
+       120
+      ],
+      [
+       300,
+       465
+      ],
+      [
+       360,
+       465
+      ]
+     ],
+     "x": 300,
+     "y": 120
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2012": {
+    "id": "Pipe-dh2012",
+    "type": "Pipe",
+    "props": {
+     "color": "#24B4FF",
+     "thickness": 20,
+     "points": [
+      [
+       345,
+       585
+      ],
+      [
+       250,
+       585
+      ],
+      [
+       250,
+       855
+      ]
+     ],
+     "x": 345,
+     "y": 585
+    },
+    "links": [],
+    "states": {}
+   },
+   "Two way valve-dh2013": {
+    "id": "Two way valve-dh2013",
+    "type": "Two way valve",
+    "props": {
+     "x": 270,
+     "y": 216,
+     "internalLink": "",
+     "rotation": "90",
+     "width": 60,
+     "height": 30
+    },
+    "links": [],
+    "states": {}
+   },
+   "Adjust-dh2014": {
+    "id": "Adjust-dh2014",
+    "type": "Adjust",
+    "props": {
+     "x": 195,
+     "y": 210,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#EEE0FF",
+     "border": "#000000"
+    },
+    "links": [
+     "AO 1"
+    ],
+    "states": {
+     "displayValue": "AO 1"
+    }
+   },
+   "Heat exchanger-dh2015": {
+    "id": "Heat exchanger-dh2015",
+    "type": "Heat exchanger",
+    "props": {
+     "x": 330,
+     "y": 420,
+     "internalLink": "",
+     "rotation": 0,
+     "height": 200,
+     "width": 90,
+     "pipeWidth": 15
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2016": {
+    "id": "Pipe-dh2016",
+    "type": "Pipe",
+    "props": {
+     "color": "#ff2424",
+     "thickness": 15,
+     "points": [
+      [
+       375,
+       420
+      ],
+      [
+       375,
+       300
+      ],
+      [
+       825,
+       300
+      ],
+      [
+       825,
+       465
+      ]
+     ],
+     "x": 375,
+     "y": 420
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2017": {
+    "id": "Pipe-dh2017",
+    "type": "Pipe",
+    "props": {
+     "color": "#24B4FF",
+     "thickness": 15,
+     "points": [
+      [
+       825,
+       465
+      ],
+      [
+       825,
+       720
+      ],
+      [
+       375,
+       720
+      ],
+      [
+       375,
+       615
+      ]
+     ],
+     "x": 825,
+     "y": 465
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pump-dh2018": {
+    "id": "Pump-dh2018",
+    "type": "Pump",
+    "props": {
+     "x": 450,
+     "y": 690,
+     "internalLink": "",
+     "rotation": "180",
+     "width": 60
+    },
+    "links": [
+     "C1.C1_PUMP"
+    ],
+    "states": {
+     "indication": "C1.C1_PUMP"
+    }
+   },
+   "Indication-dh2019": {
+    "id": "Indication-dh2019",
+    "type": "Indication",
+    "props": {
+     "x": 435,
+     "y": 600,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#8a8a8a",
+     "border": "#000000"
+    },
+    "links": [
+     "C1.C1_PUMP"
+    ],
+    "states": {
+     "displayValue": "C1.C1_PUMP"
+    }
+   },
+   "Control-dh2020": {
+    "id": "Control-dh2020",
+    "type": "Control",
+    "props": {
+     "x": 435,
+     "y": 645,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#b5b5b5",
+     "border": "#000000"
+    },
+    "links": [
+     "R1"
+    ],
+    "states": {
+     "displayValue": "R1"
+    }
+   },
+   "Circuit-dh2021": {
+    "id": "Circuit-dh2021",
+    "type": "Circuit",
+    "props": {
+     "x": 780,
+     "y": 465,
+     "internalLink": "",
+     "rotation": 0,
+     "size": 90,
+     "text": "1",
+     "fontSize": 20
+    },
+    "links": [],
+    "states": {}
+   },
+   "Text-dh2022": {
+    "id": "Text-dh2022",
+    "type": "Text",
+    "props": {
+     "x": 495,
+     "y": 345,
+     "internalLink": "",
+     "rotation": 0,
+     "text": {
+      "en": "Heating circuit 1",
+      "fi": "Lämmityspiiri 1",
+      "sv": "Värmekrets 1"
+     },
+     "font": 0,
+     "fontSize": 26,
+     "fontColor": "#000000",
+     "padding": 0,
+     "verticalAlignment": 0,
+     "horizontalAlignment": 0,
+     "fill": "rgba(0,0,0,0)",
+     "stroke": "rgba(0,0,0,0)",
+     "width": 90,
+     "height": 45
+    },
+    "links": [],
+    "states": {}
+   },
+   "Heating curve-dh2023": {
+    "id": "Heating curve-dh2023",
+    "type": "Heating curve",
+    "props": {
+     "width": 100,
+     "height": 100,
+     "xAxisName": {
+      "en": "Outdoor °C",
+      "fi": "Ulko °C",
+      "sv": "Ute °C"
+     },
+     "yAxisName": {
+      "en": "Supply °C",
+      "fi": "Meno °C",
+      "sv": "Framl. °C"
+     },
+     "pointCount": "3",
+     "invertXAxis": false,
+     "x": 390,
+     "y": 190
+    },
+    "links": [
+     "C1.C1_CRV_N20",
+     "C1.C1_CRV_0",
+     "C1.C1_CRV_P20",
+     "C1.C1_TS_MIN",
+     "C1.C1_TS_MAX",
+     "C1.C1_SP_OFFSET",
+     "COMMON.TOUT_F",
+     "C1.C1_SP"
+    ],
+    "states": {
+     "outside0": "-20",
+     "supply0": "C1.C1_CRV_N20",
+     "outside1": "0",
+     "supply1": "C1.C1_CRV_0",
+     "outside2": "20",
+     "supply2": "C1.C1_CRV_P20",
+     "min": "C1.C1_TS_MIN",
+     "max": "C1.C1_TS_MAX",
+     "parallelShift": "C1.C1_SP_OFFSET",
+     "currentOutside": "COMMON.TOUT_F",
+     "currentSupply": "C1.C1_SP"
+    }
+   },
+   "Measurement-dh2024": {
+    "id": "Measurement-dh2024",
+    "type": "Measurement",
+    "props": {
+     "x": 495,
+     "y": 195,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "C1.C1_SP"
+    ],
+    "states": {
+     "displayValue": "C1.C1_SP"
+    }
+   },
+   "Measurement-dh2025": {
+    "id": "Measurement-dh2025",
+    "type": "Measurement",
+    "props": {
+     "x": 495,
+     "y": 240,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "UI 4",
+     "C1.C1_DEV_ALM"
+    ],
+    "states": {
+     "displayValue": "UI 4",
+     "alarm": "C1.C1_DEV_ALM"
+    }
+   },
+   "Setting-dh2026": {
+    "id": "Setting-dh2026",
+    "type": "Setting",
+    "props": {
+     "x": 690,
+     "y": 450,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#FFE600",
+     "border": "#000000"
+    },
+    "links": [
+     "C1.C1_SP_OFFSET"
+    ],
+    "states": {
+     "displayValue": "C1.C1_SP_OFFSET"
+    }
+   },
+   "Setting icon-dh2027": {
+    "id": "Setting icon-dh2027",
+    "type": "Setting icon",
+    "props": {
+     "x": 600,
+     "y": 180,
+     "internalLink": "",
+     "rotation": 0,
+     "width": 50,
+     "height": 50
+    },
+    "links": [
+     "C1.C1_ENABLE",
+     "C1.C1_SETBACK",
+     "C1.C1_SUM_STOP",
+     "C1.C1_SUM_DLY",
+     "C1.C1_SUM_START",
+     "C1.C1_PID_P",
+     "C1.C1_PID_I",
+     "C1.C1_VLV_FAULT",
+     "C1.C1_EXER_ON",
+     "C1.C1_EXER_OFF",
+     "C1.C1_DEV_LIM",
+     "C1.C1_DEV_DLY"
+    ],
+    "states": {}
+   },
+   "Time program-dh2028": {
+    "id": "Time program-dh2028",
+    "type": "Time program",
+    "props": {
+     "x": 660,
+     "y": 175,
+     "internalLink": "",
+     "rotation": 0,
+     "size": "55",
+     "color": "#57564a"
+    },
+    "links": [
+     "C1.C1_TPRG"
+    ],
+    "states": {}
+   },
+   "Alarm-dh2029": {
+    "id": "Alarm-dh2029",
+    "type": "Alarm",
+    "props": {
+     "x": 600,
+     "y": 240,
+     "internalLink": "",
+     "rotation": 0,
+     "size": 45
+    },
+    "links": [
+     "C1.C1_TS_FAULT"
+    ],
+    "states": {}
+   },
+   "Two way valve-dh2030": {
+    "id": "Two way valve-dh2030",
+    "type": "Two way valve",
+    "props": {
+     "x": 920,
+     "y": 216,
+     "internalLink": "",
+     "rotation": "90",
+     "width": 60,
+     "height": 30
+    },
+    "links": [],
+    "states": {}
+   },
+   "Adjust-dh2031": {
+    "id": "Adjust-dh2031",
+    "type": "Adjust",
+    "props": {
+     "x": 845,
+     "y": 210,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#EEE0FF",
+     "border": "#000000"
+    },
+    "links": [
+     "AO 2"
+    ],
+    "states": {
+     "displayValue": "AO 2"
+    }
+   },
+   "Heat exchanger-dh2032": {
+    "id": "Heat exchanger-dh2032",
+    "type": "Heat exchanger",
+    "props": {
+     "x": 980,
+     "y": 420,
+     "internalLink": "",
+     "rotation": 0,
+     "height": 200,
+     "width": 90,
+     "pipeWidth": 15
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2033": {
+    "id": "Pipe-dh2033",
+    "type": "Pipe",
+    "props": {
+     "color": "#ff2424",
+     "thickness": 15,
+     "points": [
+      [
+       1025,
+       420
+      ],
+      [
+       1025,
+       300
+      ],
+      [
+       1475,
+       300
+      ],
+      [
+       1475,
+       465
+      ]
+     ],
+     "x": 1025,
+     "y": 420
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pipe-dh2034": {
+    "id": "Pipe-dh2034",
+    "type": "Pipe",
+    "props": {
+     "color": "#24B4FF",
+     "thickness": 15,
+     "points": [
+      [
+       1475,
+       465
+      ],
+      [
+       1475,
+       720
+      ],
+      [
+       1025,
+       720
+      ],
+      [
+       1025,
+       615
+      ]
+     ],
+     "x": 1475,
+     "y": 465
+    },
+    "links": [],
+    "states": {}
+   },
+   "Pump-dh2035": {
+    "id": "Pump-dh2035",
+    "type": "Pump",
+    "props": {
+     "x": 1100,
+     "y": 690,
+     "internalLink": "",
+     "rotation": "180",
+     "width": 60
+    },
+    "links": [
+     "C2.C2_PUMP"
+    ],
+    "states": {
+     "indication": "C2.C2_PUMP"
+    }
+   },
+   "Indication-dh2036": {
+    "id": "Indication-dh2036",
+    "type": "Indication",
+    "props": {
+     "x": 1085,
+     "y": 600,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#8a8a8a",
+     "border": "#000000"
+    },
+    "links": [
+     "C2.C2_PUMP"
+    ],
+    "states": {
+     "displayValue": "C2.C2_PUMP"
+    }
+   },
+   "Control-dh2037": {
+    "id": "Control-dh2037",
+    "type": "Control",
+    "props": {
+     "x": 1085,
+     "y": 645,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#b5b5b5",
+     "border": "#000000"
+    },
+    "links": [
+     "R2"
+    ],
+    "states": {
+     "displayValue": "R2"
+    }
+   },
+   "Circuit-dh2038": {
+    "id": "Circuit-dh2038",
+    "type": "Circuit",
+    "props": {
+     "x": 1430,
+     "y": 465,
+     "internalLink": "",
+     "rotation": 0,
+     "size": 90,
+     "text": "2",
+     "fontSize": 20
+    },
+    "links": [],
+    "states": {}
+   },
+   "Text-dh2039": {
+    "id": "Text-dh2039",
+    "type": "Text",
+    "props": {
+     "x": 1145,
+     "y": 345,
+     "internalLink": "",
+     "rotation": 0,
+     "text": {
+      "en": "Heating circuit 2",
+      "fi": "Lämmityspiiri 2",
+      "sv": "Värmekrets 2"
+     },
+     "font": 0,
+     "fontSize": 26,
+     "fontColor": "#000000",
+     "padding": 0,
+     "verticalAlignment": 0,
+     "horizontalAlignment": 0,
+     "fill": "rgba(0,0,0,0)",
+     "stroke": "rgba(0,0,0,0)",
+     "width": 90,
+     "height": 45
+    },
+    "links": [],
+    "states": {}
+   },
+   "Heating curve-dh2040": {
+    "id": "Heating curve-dh2040",
+    "type": "Heating curve",
+    "props": {
+     "width": 100,
+     "height": 100,
+     "xAxisName": {
+      "en": "Outdoor °C",
+      "fi": "Ulko °C",
+      "sv": "Ute °C"
+     },
+     "yAxisName": {
+      "en": "Supply °C",
+      "fi": "Meno °C",
+      "sv": "Framl. °C"
+     },
+     "pointCount": "3",
+     "invertXAxis": false,
+     "x": 1040,
+     "y": 190
+    },
+    "links": [
+     "C2.C2_CRV_N20",
+     "C2.C2_CRV_0",
+     "C2.C2_CRV_P20",
+     "C2.C2_TS_MIN",
+     "C2.C2_TS_MAX",
+     "C2.C2_SP_OFFSET",
+     "COMMON.TOUT_F",
+     "C2.C2_SP"
+    ],
+    "states": {
+     "outside0": "-20",
+     "supply0": "C2.C2_CRV_N20",
+     "outside1": "0",
+     "supply1": "C2.C2_CRV_0",
+     "outside2": "20",
+     "supply2": "C2.C2_CRV_P20",
+     "min": "C2.C2_TS_MIN",
+     "max": "C2.C2_TS_MAX",
+     "parallelShift": "C2.C2_SP_OFFSET",
+     "currentOutside": "COMMON.TOUT_F",
+     "currentSupply": "C2.C2_SP"
+    }
+   },
+   "Measurement-dh2041": {
+    "id": "Measurement-dh2041",
+    "type": "Measurement",
+    "props": {
+     "x": 1145,
+     "y": 195,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "C2.C2_SP"
+    ],
+    "states": {
+     "displayValue": "C2.C2_SP"
+    }
+   },
+   "Measurement-dh2042": {
+    "id": "Measurement-dh2042",
+    "type": "Measurement",
+    "props": {
+     "x": 1145,
+     "y": 240,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#ffffff",
+     "border": "#000000"
+    },
+    "links": [
+     "UI 5",
+     "C2.C2_DEV_ALM"
+    ],
+    "states": {
+     "displayValue": "UI 5",
+     "alarm": "C2.C2_DEV_ALM"
+    }
+   },
+   "Setting-dh2043": {
+    "id": "Setting-dh2043",
+    "type": "Setting",
+    "props": {
+     "x": 1340,
+     "y": 450,
+     "internalLink": "",
+     "rotation": 0,
+     "font": 0,
+     "fontSize": 20,
+     "fontColor": "#000000",
+     "width": 90,
+     "height": 45,
+     "background": "#FFE600",
+     "border": "#000000"
+    },
+    "links": [
+     "C2.C2_SP_OFFSET"
+    ],
+    "states": {
+     "displayValue": "C2.C2_SP_OFFSET"
+    }
+   },
+   "Setting icon-dh2044": {
+    "id": "Setting icon-dh2044",
+    "type": "Setting icon",
+    "props": {
+     "x": 1250,
+     "y": 180,
+     "internalLink": "",
+     "rotation": 0,
+     "width": 50,
+     "height": 50
+    },
+    "links": [
+     "C2.C2_ENABLE",
+     "C2.C2_SETBACK",
+     "C2.C2_SUM_STOP",
+     "C2.C2_SUM_DLY",
+     "C2.C2_SUM_START",
+     "C2.C2_PID_P",
+     "C2.C2_PID_I",
+     "C2.C2_VLV_FAULT",
+     "C2.C2_EXER_ON",
+     "C2.C2_EXER_OFF",
+     "C2.C2_DEV_LIM",
+     "C2.C2_DEV_DLY"
+    ],
+    "states": {}
+   },
+   "Time program-dh2045": {
+    "id": "Time program-dh2045",
+    "type": "Time program",
+    "props": {
+     "x": 1310,
+     "y": 175,
+     "internalLink": "",
+     "rotation": 0,
+     "size": "55",
+     "color": "#57564a"
+    },
+    "links": [
+     "C2.C2_TPRG"
+    ],
+    "states": {}
+   },
+   "Alarm-dh2046": {
+    "id": "Alarm-dh2046",
+    "type": "Alarm",
+    "props": {
+     "x": 1250,
+     "y": 240,
+     "internalLink": "",
+     "rotation": 0,
+     "size": 45
+    },
+    "links": [
+     "C2.C2_TS_FAULT"
+    ],
+    "states": {}
+   }
+  }
+ },
+ "link": {
+  "allIds": [],
+  "links": {}
+ },
+ "extraData": ""
+}

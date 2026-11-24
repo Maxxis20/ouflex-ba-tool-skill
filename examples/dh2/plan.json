@@ -1,0 +1,3721 @@
+{
+ "format": "ouflex-plan",
+ "version": 2,
+ "generated_by": "examples/dh2/make_plan.py",
+ "program": "dh2",
+ "title": "District heating substation, two heating circuits, no domestic hot water",
+ "block_reference": "Ouman Ouflex BA Tool 2.130.14 (blocks.json)",
+ "target": "Ouman Ouflex A base unit",
+ "legend": {
+  "pins": "{wire: 'blk.pin'} | {const: v} | {setvalue: NAME} | {tprg: NAME} | {net: NAME} | {io: 'UI 3'}; feedback: true = one cycle old",
+  "out": "per output pin a list of {net}|{io}|{measure}",
+  "exec": "declaration order inside the application"
+ },
+ "stats": {
+  "applications": 4,
+  "blocks": 73,
+  "blocks_by_type": {
+   "SwitchAn": 11,
+   "GreaterThan": 9,
+   "Or": 8,
+   "OnDelay": 7,
+   "SwitchBin": 6,
+   "LessThan": 5,
+   "Subtract": 4,
+   "And": 4,
+   "Curve_3p": 2,
+   "Add": 2,
+   "Max": 2,
+   "Min": 2,
+   "RS_FlipFlop": 2,
+   "GreaterOrEqual": 2,
+   "OnOffPulse": 2,
+   "Pid": 2,
+   "Absolute": 2,
+   "SignalFilter": 1
+  },
+  "setvalues": 38,
+  "timeprograms": 2,
+  "measures": 22,
+  "io": 10,
+  "nets": 6
+ },
+ "applications": [
+  {
+   "name": "COMMON",
+   "order": 1,
+   "doc": "Outdoor temperature: range check, fallback value, slow filter; shared by both circuits",
+   "blocks": [
+    {
+     "id": "tlo",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "Outdoor sensor check",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - reading below the plausible range = sensor fault",
+     "pins": {
+      "A": {
+       "io": "UI 1"
+      },
+      "B": {
+       "const": -45.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "thi",
+     "exec": 2,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 187,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - reading above the plausible range = sensor fault",
+     "pins": {
+      "A": {
+       "io": "UI 1"
+      },
+      "B": {
+       "const": 50.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tbad",
+     "exec": 3,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 380,
+     "y": 86,
+     "label": "Outdoor fault",
+     "why": "vendor: Or 'If some input is 1, output is 1'; unused inputs untouched (excluded)",
+     "pins": {
+      "Input1": {
+       "wire": "tlo.Output"
+      },
+      "Input2": {
+       "wire": "thi.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsub",
+     "exec": 4,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 309,
+     "label": "Fallback value",
+     "why": "vendor: SwitchAn 'If Select = 0, Output = Input0. If Select = 1, Output = Input1' - substitute value on fault",
+     "pins": {
+      "Select": {
+       "wire": "tbad.Output"
+      },
+      "Input0": {
+       "io": "UI 1"
+      },
+      "Input1": {
+       "setvalue": "TOUT_FALLBACK"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tflt",
+     "exec": 5,
+     "lib": "OumanComponents",
+     "type": "SignalFilter",
+     "version": "1.1",
+     "file": "SignalFilter.ouepr",
+     "x": 700,
+     "y": 86,
+     "label": "Outdoor filter",
+     "why": "vendor: SignalFilter 'first-order low-pass'; TimeConstant 'sekunteina' (seconds). Enable set 1 explicitly (Enable=0 not stated)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "tsub.Output"
+      },
+      "TimeConstant": {
+       "setvalue": "TOUT_FILT_T"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TOUT_F"
+       },
+       {
+        "net": "TOUT_F"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tfd",
+     "exec": 6,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 700,
+     "y": 229,
+     "label": "Outdoor fault status",
+     "why": "vendor: OnDelay '0 to 1 is seen after a delay', '1 to 0 reflected immediately'; Enable=1 explicitly since Enable=0 passes through",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "tbad.Output"
+      },
+      "DelayTime": {
+       "const": 10.0
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "TOUT_FAULT"
+       },
+       {
+        "net": "TOUT_FAULT"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "Outdoor sensor check",
+     "x": 60,
+     "y": 60
+    },
+    {
+     "text": "Outdoor fault",
+     "x": 380,
+     "y": 60
+    },
+    {
+     "text": "Fallback value",
+     "x": 380,
+     "y": 283
+    },
+    {
+     "text": "Outdoor filter",
+     "x": 700,
+     "y": 60
+    },
+    {
+     "text": "Outdoor fault status",
+     "x": 700,
+     "y": 203
+    }
+   ]
+  },
+  {
+   "name": "C1",
+   "order": 2,
+   "doc": "Heating circuit 1, radiators",
+   "blocks": [
+    {
+     "id": "tslo",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "Supply sensor check",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - below plausible range = open circuit / fault",
+     "pins": {
+      "A": {
+       "io": "UI 4"
+      },
+      "B": {
+       "const": -20.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tshi",
+     "exec": 2,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 187,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - above plausible range = short circuit / fault",
+     "pins": {
+      "A": {
+       "io": "UI 4"
+      },
+      "B": {
+       "const": 120.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsbad",
+     "exec": 3,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 289,
+     "label": "",
+     "why": "vendor: Or 'If some input is 1, output is 1'",
+     "pins": {
+      "Input1": {
+       "wire": "tslo.Output"
+      },
+      "Input2": {
+       "wire": "tshi.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsfd",
+     "exec": 4,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 486,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 delayed by DelayTime (s), 1->0 immediate; Enable=1 explicitly",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "tsbad.Output"
+      },
+      "DelayTime": {
+       "const": 10.0
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_TS_FAULT"
+       },
+       {
+        "net": "C1_TS_FAULT"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sstop",
+     "exec": 5,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 629,
+     "label": "Summer stop",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - outdoor above stop limit",
+     "pins": {
+      "A": {
+       "net": "TOUT_F"
+      },
+      "B": {
+       "setvalue": "C1_SUM_STOP"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sdly",
+     "exec": 6,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 730,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s, a dip below the limit restarts the delay (ouman-answers OnDelay-1, medium)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "sstop.Output"
+      },
+      "DelayTime": {
+       "setvalue": "C1_SUM_DLY"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sstart",
+     "exec": 7,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 848,
+     "label": "",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - outdoor below restart limit",
+     "pins": {
+      "A": {
+       "net": "TOUT_F"
+      },
+      "B": {
+       "setvalue": "C1_SUM_START"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "curve",
+     "exec": 8,
+     "lib": "OumanComponents",
+     "type": "Curve_3p",
+     "version": "1.13",
+     "file": "Curve_3p.ouepr",
+     "x": 380,
+     "y": 86,
+     "label": "Heating curve",
+     "why": "vendor: Curve_3p 'curve is defined at 3 points: -20 °C, 0 °C and +20 °C', 'cut ... with minimum and maximum limits', 'automatic adjustment of the curve convexity'; CurveOut (uncut) is used so the offset is added before the cut",
+     "pins": {
+      "Input": {
+       "net": "TOUT_F"
+      },
+      "Out_n20": {
+       "setvalue": "C1_CRV_N20"
+      },
+      "Out_0": {
+       "setvalue": "C1_CRV_0"
+      },
+      "Out_p20": {
+       "setvalue": "C1_CRV_P20"
+      },
+      "Min": {
+       "setvalue": "C1_TS_MIN"
+      },
+      "Max": {
+       "setvalue": "C1_TS_MAX"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "offs",
+     "exec": 9,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 251,
+     "label": "",
+     "why": "vendor: SwitchAn Select=0 -> Output = Input0; pass-through puts the set value on a block output (a set value on an extendable Add input is avoided, design-rules)",
+     "pins": {
+      "Select": {
+       "const": 0
+      },
+      "Input0": {
+       "setvalue": "C1_SP_OFFSET"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pmin",
+     "exec": 10,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 369,
+     "label": "",
+     "why": "vendor: SwitchAn Select=0 -> Output = Input0; minimum limit as a block output for the Max block",
+     "pins": {
+      "Select": {
+       "const": 0
+      },
+      "Input0": {
+       "setvalue": "C1_TS_MIN"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pmax",
+     "exec": 11,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 486,
+     "label": "",
+     "why": "vendor: SwitchAn Select=0 -> Output = Input0; maximum limit as a block output for Min",
+     "pins": {
+      "Select": {
+       "const": 0
+      },
+      "Input0": {
+       "setvalue": "C1_TS_MAX"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "nsb",
+     "exec": 12,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 629,
+     "label": "Night setback",
+     "why": "vendor: SwitchAn 'If Select = 0, Output = Input0. If Select = 1, Output = Input1' - setback amount while the time program is 0, nothing while it is 1; the time program sits on Select (an Enum block input)",
+     "pins": {
+      "Select": {
+       "tprg": "C1_TPRG"
+      },
+      "Input0": {
+       "setvalue": "C1_SETBACK"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "spadd",
+     "exec": 13,
+     "lib": "OumanComponents",
+     "type": "Add",
+     "version": "1.4",
+     "file": "Add.ouepr",
+     "x": 700,
+     "y": 86,
+     "label": "Setpoint with limits",
+     "why": "vendor: Add 'Output = A + B1 + ...'; unconnected inputs excluded",
+     "pins": {
+      "A": {
+       "wire": "curve.CurveOut"
+      },
+      "B1": {
+       "wire": "offs.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "spsb",
+     "exec": 14,
+     "lib": "OumanComponents",
+     "type": "Subtract",
+     "version": "1.1",
+     "file": "Subtract.ouepr",
+     "x": 700,
+     "y": 299,
+     "label": "",
+     "why": "vendor: Subtract 'Output = A - B1 - ...' - setback lowers the setpoint before the limits",
+     "pins": {
+      "A": {
+       "wire": "spadd.Output"
+      },
+      "B1": {
+       "wire": "nsb.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "splo",
+     "exec": 15,
+     "lib": "OumanComponents",
+     "type": "Max",
+     "version": "1.2",
+     "file": "Max.ouepr",
+     "x": 700,
+     "y": 513,
+     "label": "",
+     "why": "vendor: Max 'Output = Input which has the maximum value' - minimum cut after the offset",
+     "pins": {
+      "Input1": {
+       "wire": "spsb.Output"
+      },
+      "Input2": {
+       "wire": "pmin.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sp",
+     "exec": 16,
+     "lib": "OumanComponents",
+     "type": "Min",
+     "version": "1.2",
+     "file": "Min.ouepr",
+     "x": 700,
+     "y": 710,
+     "label": "",
+     "why": "vendor: Min 'Output = Minimum input value' - maximum cut last, so Max wins if Min > Max",
+     "pins": {
+      "Input1": {
+       "wire": "splo.Output"
+      },
+      "Input2": {
+       "wire": "pmax.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_SP"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "slat",
+     "exec": 17,
+     "lib": "OumanComponents",
+     "type": "RS_FlipFlop",
+     "version": "2.1",
+     "file": "RS_FlipFlop_v2.ouepr",
+     "x": 700,
+     "y": 933,
+     "label": "Summer latch",
+     "why": "vendor: RS_FlipFlop 'If both S and R are 1, Output is 0' (reset dominant -> heating wins if limits overlap); both 0 'remain its state' = hysteresis",
+     "pins": {
+      "S": {
+       "wire": "sdly.Output"
+      },
+      "R": {
+       "wire": "sstart.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_SUMMER"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "svmm",
+     "exec": 18,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 700,
+     "y": 1060,
+     "label": "Set value check",
+     "why": "vendor: GreaterThan - minimum supply limit above maximum is inconsistent",
+     "pins": {
+      "A": {
+       "setvalue": "C1_TS_MIN"
+      },
+      "B": {
+       "setvalue": "C1_TS_MAX"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "svss",
+     "exec": 19,
+     "lib": "OumanComponents",
+     "type": "GreaterOrEqual",
+     "version": "1.3",
+     "file": "GreaterOrEqual.ouepr",
+     "x": 700,
+     "y": 1162,
+     "label": "",
+     "why": "vendor: GreaterOrEqual 'if A >= B, Output = 1' - restart limit not below stop limit is inconsistent",
+     "pins": {
+      "A": {
+       "setvalue": "C1_SUM_START"
+      },
+      "B": {
+       "setvalue": "C1_SUM_STOP"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sverr",
+     "exec": 20,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 700,
+     "y": 1263,
+     "label": "",
+     "why": "vendor: Or",
+     "pins": {
+      "Input1": {
+       "wire": "svmm.Output"
+      },
+      "Input2": {
+       "wire": "svss.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_SV_ERR"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "run",
+     "exec": 21,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 1020,
+     "y": 86,
+     "label": "Circuit run",
+     "why": "vendor: SwitchBin 'If Select = 0, Output = Input0' -> run = ENABLE AND NOT summer; RS OutputNeg 'is inverse of Output'",
+     "pins": {
+      "Select": {
+       "setvalue": "C1_ENABLE"
+      },
+      "Input0": {
+       "const": 0
+      },
+      "Input1": {
+       "wire": "slat.OutputNeg"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "exen",
+     "exec": 22,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 1020,
+     "y": 203,
+     "label": "",
+     "why": "vendor: SwitchBin -> exercise allowed only when enabled and in summer stop",
+     "pins": {
+      "Select": {
+       "setvalue": "C1_ENABLE"
+      },
+      "Input0": {
+       "const": 0
+      },
+      "Input1": {
+       "wire": "slat.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "exer",
+     "exec": 23,
+     "lib": "OumanComponents",
+     "type": "OnOffPulse",
+     "version": "2.4",
+     "file": "OnOffPulse_v2.ouepr",
+     "x": 1020,
+     "y": 347,
+     "label": "Pump exercise",
+     "why": "vendor: OnOffPulse 'Output is 1 for OnTime (in seconds) and 0 for OffTime (in seconds)', 'If Enable = 0, Output = 0'; StartState=0 'pulsing is started by OffPulse'",
+     "pins": {
+      "Enable": {
+       "wire": "exen.Output"
+      },
+      "OnTime": {
+       "setvalue": "C1_EXER_ON"
+      },
+      "OffTime": {
+       "setvalue": "C1_EXER_OFF"
+      },
+      "StartState": {
+       "const": 0
+      },
+      "Restart": {
+       "const": 0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pump",
+     "exec": 24,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 1020,
+     "y": 496,
+     "label": "",
+     "why": "vendor: Or - pump runs when the circuit runs or during an exercise pulse",
+     "pins": {
+      "Input1": {
+       "wire": "run.Output"
+      },
+      "Input2": {
+       "wire": "exer.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_PUMP"
+       },
+       {
+        "io": "R1"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pen",
+     "exec": 25,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 1020,
+     "y": 719,
+     "label": "Valve control",
+     "why": "vendor: SwitchBin -> PID enable = run AND NOT supply sensor fault",
+     "pins": {
+      "Select": {
+       "wire": "tsbad.Output"
+      },
+      "Input0": {
+       "wire": "run.Output"
+      },
+      "Input1": {
+       "const": 0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pid",
+     "exec": 26,
+     "lib": "OumanComponents",
+     "type": "Pid",
+     "version": "5.1",
+     "file": "Pid_v5.ouepr",
+     "x": 1020,
+     "y": 836,
+     "label": "",
+     "why": "vendor: Pid 5.1 'If Enable input is 0 ... output is 0%', 'Reverse ... 1 = Heating', P 'P-area' in °C (2..500), I 'I time in seconds' (5..300, 'ei saa asettaa nollaksi'); Feedback left unconnected ('If Feedback input is connected'), U32 stage pins untouched",
+     "pins": {
+      "Enable": {
+       "wire": "pen.Output"
+      },
+      "SetPoint": {
+       "wire": "sp.Output"
+      },
+      "Measure": {
+       "io": "UI 4"
+      },
+      "DeadBand": {
+       "const": 0.5
+      },
+      "Reverse": {
+       "const": 1
+      },
+      "P": {
+       "setvalue": "C1_PID_P"
+      },
+      "I": {
+       "setvalue": "C1_PID_I"
+      },
+      "D": {
+       "const": 0.0
+      },
+      "CtrlSpace": {
+       "const": 1.0
+      },
+      "Min": {
+       "const": 0.0
+      },
+      "Max": {
+       "const": 100.0
+      },
+      "Balance": {
+       "const": 0.0
+      },
+      "BreakBand": {
+       "const": 0.0
+      },
+      "Hold": {
+       "const": 0
+      },
+      "StageUpDelay": {
+       "const": 0.0
+      },
+      "StageDownDelay": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "fsel",
+     "exec": 27,
+     "lib": "OumanComponents",
+     "type": "And",
+     "version": "1.1",
+     "file": "And.ouepr",
+     "x": 1020,
+     "y": 1226,
+     "label": "",
+     "why": "vendor: And 'If all inputs are 1, output is 1' - fault position only while the circuit runs",
+     "pins": {
+      "Input1": {
+       "wire": "run.Output"
+      },
+      "Input2": {
+       "wire": "tsbad.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "vlv",
+     "exec": 28,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 1340,
+     "y": 86,
+     "label": "Valve output",
+     "why": "vendor: SwitchAn Select=1 -> Input1 (fixed valve position on supply sensor fault)",
+     "pins": {
+      "Select": {
+       "wire": "fsel.Output"
+      },
+      "Input0": {
+       "wire": "pid.Output"
+      },
+      "Input1": {
+       "setvalue": "C1_VLV_FAULT"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_VALVE"
+       },
+       {
+        "io": "AO 1"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dev",
+     "exec": 29,
+     "lib": "OumanComponents",
+     "type": "Subtract",
+     "version": "1.1",
+     "file": "Subtract.ouepr",
+     "x": 1340,
+     "y": 229,
+     "label": "Deviation alarm",
+     "why": "vendor: Subtract 'Output = A - B1 - ...'",
+     "pins": {
+      "A": {
+       "io": "UI 4"
+      },
+      "B1": {
+       "wire": "sp.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dabs",
+     "exec": 30,
+     "lib": "OumanComponents",
+     "type": "Absolute",
+     "version": "1.1",
+     "file": "Absolute.ouepr",
+     "x": 1340,
+     "y": 443,
+     "label": "",
+     "why": "vendor: Absolute 'If Input < 0, Output = -1 * Input' (used as |x|, not as a pass-through)",
+     "pins": {
+      "Input": {
+       "wire": "dev.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dgt",
+     "exec": 31,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 1340,
+     "y": 528,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1'",
+     "pins": {
+      "A": {
+       "wire": "dabs.Output"
+      },
+      "B": {
+       "setvalue": "C1_DEV_LIM"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dand",
+     "exec": 32,
+     "lib": "OumanComponents",
+     "type": "And",
+     "version": "1.1",
+     "file": "And.ouepr",
+     "x": 1340,
+     "y": 629,
+     "label": "",
+     "why": "vendor: And - deviation counts only while the valve is under PID control",
+     "pins": {
+      "Input1": {
+       "wire": "dgt.Output"
+      },
+      "Input2": {
+       "wire": "pen.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "ddly",
+     "exec": 33,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 1340,
+     "y": 826,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s, 1->0 immediate (alarm clears as soon as the deviation is gone)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "dand.Output"
+      },
+      "DelayTime": {
+       "setvalue": "C1_DEV_DLY"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C1_DEV_ALM"
+       },
+       {
+        "net": "C1_DEV_ALM"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "Supply sensor check",
+     "x": 60,
+     "y": 60
+    },
+    {
+     "text": "Summer stop",
+     "x": 60,
+     "y": 603
+    },
+    {
+     "text": "Heating curve",
+     "x": 380,
+     "y": 60
+    },
+    {
+     "text": "Night setback",
+     "x": 380,
+     "y": 603
+    },
+    {
+     "text": "Setpoint with limits",
+     "x": 700,
+     "y": 60
+    },
+    {
+     "text": "Summer latch",
+     "x": 700,
+     "y": 907
+    },
+    {
+     "text": "Set value check",
+     "x": 700,
+     "y": 1034
+    },
+    {
+     "text": "Circuit run",
+     "x": 1020,
+     "y": 60
+    },
+    {
+     "text": "Pump exercise",
+     "x": 1020,
+     "y": 320
+    },
+    {
+     "text": "Valve control",
+     "x": 1020,
+     "y": 693
+    },
+    {
+     "text": "Valve output",
+     "x": 1340,
+     "y": 60
+    },
+    {
+     "text": "Deviation alarm",
+     "x": 1340,
+     "y": 203
+    }
+   ]
+  },
+  {
+   "name": "C2",
+   "order": 3,
+   "doc": "Heating circuit 2, floor heating",
+   "blocks": [
+    {
+     "id": "tslo",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "Supply sensor check",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - below plausible range = open circuit / fault",
+     "pins": {
+      "A": {
+       "io": "UI 5"
+      },
+      "B": {
+       "const": -20.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tshi",
+     "exec": 2,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 187,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - above plausible range = short circuit / fault",
+     "pins": {
+      "A": {
+       "io": "UI 5"
+      },
+      "B": {
+       "const": 120.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsbad",
+     "exec": 3,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 289,
+     "label": "",
+     "why": "vendor: Or 'If some input is 1, output is 1'",
+     "pins": {
+      "Input1": {
+       "wire": "tslo.Output"
+      },
+      "Input2": {
+       "wire": "tshi.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "tsfd",
+     "exec": 4,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 486,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 delayed by DelayTime (s), 1->0 immediate; Enable=1 explicitly",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "tsbad.Output"
+      },
+      "DelayTime": {
+       "const": 10.0
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_TS_FAULT"
+       },
+       {
+        "net": "C2_TS_FAULT"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sstop",
+     "exec": 5,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 60,
+     "y": 629,
+     "label": "Summer stop",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1' - outdoor above stop limit",
+     "pins": {
+      "A": {
+       "net": "TOUT_F"
+      },
+      "B": {
+       "setvalue": "C2_SUM_STOP"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sdly",
+     "exec": 6,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 60,
+     "y": 730,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s, a dip below the limit restarts the delay (ouman-answers OnDelay-1, medium)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "sstop.Output"
+      },
+      "DelayTime": {
+       "setvalue": "C2_SUM_DLY"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sstart",
+     "exec": 7,
+     "lib": "OumanComponents",
+     "type": "LessThan",
+     "version": "1.0",
+     "file": "LessThan.ouepr",
+     "x": 60,
+     "y": 848,
+     "label": "",
+     "why": "vendor: LessThan 'if A < B, Output = 1' - outdoor below restart limit",
+     "pins": {
+      "A": {
+       "net": "TOUT_F"
+      },
+      "B": {
+       "setvalue": "C2_SUM_START"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "curve",
+     "exec": 8,
+     "lib": "OumanComponents",
+     "type": "Curve_3p",
+     "version": "1.13",
+     "file": "Curve_3p.ouepr",
+     "x": 380,
+     "y": 86,
+     "label": "Heating curve",
+     "why": "vendor: Curve_3p 'curve is defined at 3 points: -20 °C, 0 °C and +20 °C', 'cut ... with minimum and maximum limits', 'automatic adjustment of the curve convexity'; CurveOut (uncut) is used so the offset is added before the cut",
+     "pins": {
+      "Input": {
+       "net": "TOUT_F"
+      },
+      "Out_n20": {
+       "setvalue": "C2_CRV_N20"
+      },
+      "Out_0": {
+       "setvalue": "C2_CRV_0"
+      },
+      "Out_p20": {
+       "setvalue": "C2_CRV_P20"
+      },
+      "Min": {
+       "setvalue": "C2_TS_MIN"
+      },
+      "Max": {
+       "setvalue": "C2_TS_MAX"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "offs",
+     "exec": 9,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 251,
+     "label": "",
+     "why": "vendor: SwitchAn Select=0 -> Output = Input0; pass-through puts the set value on a block output (a set value on an extendable Add input is avoided, design-rules)",
+     "pins": {
+      "Select": {
+       "const": 0
+      },
+      "Input0": {
+       "setvalue": "C2_SP_OFFSET"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pmin",
+     "exec": 10,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 369,
+     "label": "",
+     "why": "vendor: SwitchAn Select=0 -> Output = Input0; minimum limit as a block output for the Max block",
+     "pins": {
+      "Select": {
+       "const": 0
+      },
+      "Input0": {
+       "setvalue": "C2_TS_MIN"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pmax",
+     "exec": 11,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 486,
+     "label": "",
+     "why": "vendor: SwitchAn Select=0 -> Output = Input0; maximum limit as a block output for Min",
+     "pins": {
+      "Select": {
+       "const": 0
+      },
+      "Input0": {
+       "setvalue": "C2_TS_MAX"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "nsb",
+     "exec": 12,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 380,
+     "y": 629,
+     "label": "Night setback",
+     "why": "vendor: SwitchAn 'If Select = 0, Output = Input0. If Select = 1, Output = Input1' - setback amount while the time program is 0, nothing while it is 1; the time program sits on Select (an Enum block input)",
+     "pins": {
+      "Select": {
+       "tprg": "C2_TPRG"
+      },
+      "Input0": {
+       "setvalue": "C2_SETBACK"
+      },
+      "Input1": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "spadd",
+     "exec": 13,
+     "lib": "OumanComponents",
+     "type": "Add",
+     "version": "1.4",
+     "file": "Add.ouepr",
+     "x": 700,
+     "y": 86,
+     "label": "Setpoint with limits",
+     "why": "vendor: Add 'Output = A + B1 + ...'; unconnected inputs excluded",
+     "pins": {
+      "A": {
+       "wire": "curve.CurveOut"
+      },
+      "B1": {
+       "wire": "offs.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "spsb",
+     "exec": 14,
+     "lib": "OumanComponents",
+     "type": "Subtract",
+     "version": "1.1",
+     "file": "Subtract.ouepr",
+     "x": 700,
+     "y": 299,
+     "label": "",
+     "why": "vendor: Subtract 'Output = A - B1 - ...' - setback lowers the setpoint before the limits",
+     "pins": {
+      "A": {
+       "wire": "spadd.Output"
+      },
+      "B1": {
+       "wire": "nsb.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "splo",
+     "exec": 15,
+     "lib": "OumanComponents",
+     "type": "Max",
+     "version": "1.2",
+     "file": "Max.ouepr",
+     "x": 700,
+     "y": 513,
+     "label": "",
+     "why": "vendor: Max 'Output = Input which has the maximum value' - minimum cut after the offset",
+     "pins": {
+      "Input1": {
+       "wire": "spsb.Output"
+      },
+      "Input2": {
+       "wire": "pmin.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sp",
+     "exec": 16,
+     "lib": "OumanComponents",
+     "type": "Min",
+     "version": "1.2",
+     "file": "Min.ouepr",
+     "x": 700,
+     "y": 710,
+     "label": "",
+     "why": "vendor: Min 'Output = Minimum input value' - maximum cut last, so Max wins if Min > Max",
+     "pins": {
+      "Input1": {
+       "wire": "splo.Output"
+      },
+      "Input2": {
+       "wire": "pmax.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_SP"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "slat",
+     "exec": 17,
+     "lib": "OumanComponents",
+     "type": "RS_FlipFlop",
+     "version": "2.1",
+     "file": "RS_FlipFlop_v2.ouepr",
+     "x": 700,
+     "y": 933,
+     "label": "Summer latch",
+     "why": "vendor: RS_FlipFlop 'If both S and R are 1, Output is 0' (reset dominant -> heating wins if limits overlap); both 0 'remain its state' = hysteresis",
+     "pins": {
+      "S": {
+       "wire": "sdly.Output"
+      },
+      "R": {
+       "wire": "sstart.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_SUMMER"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "svmm",
+     "exec": 18,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 700,
+     "y": 1060,
+     "label": "Set value check",
+     "why": "vendor: GreaterThan - minimum supply limit above maximum is inconsistent",
+     "pins": {
+      "A": {
+       "setvalue": "C2_TS_MIN"
+      },
+      "B": {
+       "setvalue": "C2_TS_MAX"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "svss",
+     "exec": 19,
+     "lib": "OumanComponents",
+     "type": "GreaterOrEqual",
+     "version": "1.3",
+     "file": "GreaterOrEqual.ouepr",
+     "x": 700,
+     "y": 1162,
+     "label": "",
+     "why": "vendor: GreaterOrEqual 'if A >= B, Output = 1' - restart limit not below stop limit is inconsistent",
+     "pins": {
+      "A": {
+       "setvalue": "C2_SUM_START"
+      },
+      "B": {
+       "setvalue": "C2_SUM_STOP"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "sverr",
+     "exec": 20,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 700,
+     "y": 1263,
+     "label": "",
+     "why": "vendor: Or",
+     "pins": {
+      "Input1": {
+       "wire": "svmm.Output"
+      },
+      "Input2": {
+       "wire": "svss.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_SV_ERR"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "run",
+     "exec": 21,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 1020,
+     "y": 86,
+     "label": "Circuit run",
+     "why": "vendor: SwitchBin 'If Select = 0, Output = Input0' -> run = ENABLE AND NOT summer; RS OutputNeg 'is inverse of Output'",
+     "pins": {
+      "Select": {
+       "setvalue": "C2_ENABLE"
+      },
+      "Input0": {
+       "const": 0
+      },
+      "Input1": {
+       "wire": "slat.OutputNeg"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "exen",
+     "exec": 22,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 1020,
+     "y": 203,
+     "label": "",
+     "why": "vendor: SwitchBin -> exercise allowed only when enabled and in summer stop",
+     "pins": {
+      "Select": {
+       "setvalue": "C2_ENABLE"
+      },
+      "Input0": {
+       "const": 0
+      },
+      "Input1": {
+       "wire": "slat.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "exer",
+     "exec": 23,
+     "lib": "OumanComponents",
+     "type": "OnOffPulse",
+     "version": "2.4",
+     "file": "OnOffPulse_v2.ouepr",
+     "x": 1020,
+     "y": 347,
+     "label": "Pump exercise",
+     "why": "vendor: OnOffPulse 'Output is 1 for OnTime (in seconds) and 0 for OffTime (in seconds)', 'If Enable = 0, Output = 0'; StartState=0 'pulsing is started by OffPulse'",
+     "pins": {
+      "Enable": {
+       "wire": "exen.Output"
+      },
+      "OnTime": {
+       "setvalue": "C2_EXER_ON"
+      },
+      "OffTime": {
+       "setvalue": "C2_EXER_OFF"
+      },
+      "StartState": {
+       "const": 0
+      },
+      "Restart": {
+       "const": 0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pump",
+     "exec": 24,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 1020,
+     "y": 496,
+     "label": "",
+     "why": "vendor: Or - pump runs when the circuit runs or during an exercise pulse",
+     "pins": {
+      "Input1": {
+       "wire": "run.Output"
+      },
+      "Input2": {
+       "wire": "exer.Output"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_PUMP"
+       },
+       {
+        "io": "R2"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pen",
+     "exec": 25,
+     "lib": "OumanComponents",
+     "type": "SwitchBin",
+     "version": "1.0",
+     "file": "SwitchBin.ouepr",
+     "x": 1020,
+     "y": 719,
+     "label": "Valve control",
+     "why": "vendor: SwitchBin -> PID enable = run AND NOT supply sensor fault",
+     "pins": {
+      "Select": {
+       "wire": "tsbad.Output"
+      },
+      "Input0": {
+       "wire": "run.Output"
+      },
+      "Input1": {
+       "const": 0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "pid",
+     "exec": 26,
+     "lib": "OumanComponents",
+     "type": "Pid",
+     "version": "5.1",
+     "file": "Pid_v5.ouepr",
+     "x": 1020,
+     "y": 836,
+     "label": "",
+     "why": "vendor: Pid 5.1 'If Enable input is 0 ... output is 0%', 'Reverse ... 1 = Heating', P 'P-area' in °C (2..500), I 'I time in seconds' (5..300, 'ei saa asettaa nollaksi'); Feedback left unconnected ('If Feedback input is connected'), U32 stage pins untouched",
+     "pins": {
+      "Enable": {
+       "wire": "pen.Output"
+      },
+      "SetPoint": {
+       "wire": "sp.Output"
+      },
+      "Measure": {
+       "io": "UI 5"
+      },
+      "DeadBand": {
+       "const": 0.5
+      },
+      "Reverse": {
+       "const": 1
+      },
+      "P": {
+       "setvalue": "C2_PID_P"
+      },
+      "I": {
+       "setvalue": "C2_PID_I"
+      },
+      "D": {
+       "const": 0.0
+      },
+      "CtrlSpace": {
+       "const": 1.0
+      },
+      "Min": {
+       "const": 0.0
+      },
+      "Max": {
+       "const": 100.0
+      },
+      "Balance": {
+       "const": 0.0
+      },
+      "BreakBand": {
+       "const": 0.0
+      },
+      "Hold": {
+       "const": 0
+      },
+      "StageUpDelay": {
+       "const": 0.0
+      },
+      "StageDownDelay": {
+       "const": 0.0
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "fsel",
+     "exec": 27,
+     "lib": "OumanComponents",
+     "type": "And",
+     "version": "1.1",
+     "file": "And.ouepr",
+     "x": 1020,
+     "y": 1226,
+     "label": "",
+     "why": "vendor: And 'If all inputs are 1, output is 1' - fault position only while the circuit runs",
+     "pins": {
+      "Input1": {
+       "wire": "run.Output"
+      },
+      "Input2": {
+       "wire": "tsbad.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "vlv",
+     "exec": 28,
+     "lib": "OumanComponents",
+     "type": "SwitchAn",
+     "version": "1.0",
+     "file": "SwitchAn.ouepr",
+     "x": 1340,
+     "y": 86,
+     "label": "Valve output",
+     "why": "vendor: SwitchAn Select=1 -> Input1 (fixed valve position on supply sensor fault)",
+     "pins": {
+      "Select": {
+       "wire": "fsel.Output"
+      },
+      "Input0": {
+       "wire": "pid.Output"
+      },
+      "Input1": {
+       "setvalue": "C2_VLV_FAULT"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_VALVE"
+       },
+       {
+        "io": "AO 2"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dev",
+     "exec": 29,
+     "lib": "OumanComponents",
+     "type": "Subtract",
+     "version": "1.1",
+     "file": "Subtract.ouepr",
+     "x": 1340,
+     "y": 229,
+     "label": "Deviation alarm",
+     "why": "vendor: Subtract 'Output = A - B1 - ...'",
+     "pins": {
+      "A": {
+       "io": "UI 5"
+      },
+      "B1": {
+       "wire": "sp.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dabs",
+     "exec": 30,
+     "lib": "OumanComponents",
+     "type": "Absolute",
+     "version": "1.1",
+     "file": "Absolute.ouepr",
+     "x": 1340,
+     "y": 443,
+     "label": "",
+     "why": "vendor: Absolute 'If Input < 0, Output = -1 * Input' (used as |x|, not as a pass-through)",
+     "pins": {
+      "Input": {
+       "wire": "dev.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dgt",
+     "exec": 31,
+     "lib": "OumanComponents",
+     "type": "GreaterThan",
+     "version": "1.1",
+     "file": "GreaterThan.ouepr",
+     "x": 1340,
+     "y": 528,
+     "label": "",
+     "why": "vendor: GreaterThan 'if A > B, Output = 1'",
+     "pins": {
+      "A": {
+       "wire": "dabs.Output"
+      },
+      "B": {
+       "setvalue": "C2_DEV_LIM"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "dand",
+     "exec": 32,
+     "lib": "OumanComponents",
+     "type": "And",
+     "version": "1.1",
+     "file": "And.ouepr",
+     "x": 1340,
+     "y": 629,
+     "label": "",
+     "why": "vendor: And - deviation counts only while the valve is under PID control",
+     "pins": {
+      "Input1": {
+       "wire": "dgt.Output"
+      },
+      "Input2": {
+       "wire": "pen.Output"
+      }
+     },
+     "out": {},
+     "flags": [],
+     "note": ""
+    },
+    {
+     "id": "ddly",
+     "exec": 33,
+     "lib": "OumanComponents",
+     "type": "OnDelay",
+     "version": "1.6",
+     "file": "OnDelay.ouepr",
+     "x": 1340,
+     "y": 826,
+     "label": "",
+     "why": "vendor: OnDelay 0->1 after DelayTime s, 1->0 immediate (alarm clears as soon as the deviation is gone)",
+     "pins": {
+      "Enable": {
+       "const": 1
+      },
+      "Input": {
+       "wire": "dand.Output"
+      },
+      "DelayTime": {
+       "setvalue": "C2_DEV_DLY"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "C2_DEV_ALM"
+       },
+       {
+        "net": "C2_DEV_ALM"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "Supply sensor check",
+     "x": 60,
+     "y": 60
+    },
+    {
+     "text": "Summer stop",
+     "x": 60,
+     "y": 603
+    },
+    {
+     "text": "Heating curve",
+     "x": 380,
+     "y": 60
+    },
+    {
+     "text": "Night setback",
+     "x": 380,
+     "y": 603
+    },
+    {
+     "text": "Setpoint with limits",
+     "x": 700,
+     "y": 60
+    },
+    {
+     "text": "Summer latch",
+     "x": 700,
+     "y": 907
+    },
+    {
+     "text": "Set value check",
+     "x": 700,
+     "y": 1034
+    },
+    {
+     "text": "Circuit run",
+     "x": 1020,
+     "y": 60
+    },
+    {
+     "text": "Pump exercise",
+     "x": 1020,
+     "y": 320
+    },
+    {
+     "text": "Valve control",
+     "x": 1020,
+     "y": 693
+    },
+    {
+     "text": "Valve output",
+     "x": 1340,
+     "y": 60
+    },
+    {
+     "text": "Deviation alarm",
+     "x": 1340,
+     "y": 203
+    }
+   ]
+  },
+  {
+   "name": "ALARM",
+   "order": 4,
+   "doc": "Common alarm relay: OR of all alarm status bits (runs last, so every input is from this cycle)",
+   "blocks": [
+    {
+     "id": "alm",
+     "exec": 1,
+     "lib": "OumanComponents",
+     "type": "Or",
+     "version": "1.1",
+     "file": "Or.ouepr",
+     "x": 60,
+     "y": 86,
+     "label": "Common alarm",
+     "why": "vendor: Or 'If some input is 1, output is 1'; Input6..8 untouched (excluded)",
+     "pins": {
+      "Input1": {
+       "net": "TOUT_FAULT"
+      },
+      "Input2": {
+       "net": "C1_TS_FAULT"
+      },
+      "Input3": {
+       "net": "C1_DEV_ALM"
+      },
+      "Input4": {
+       "net": "C2_TS_FAULT"
+      },
+      "Input5": {
+       "net": "C2_DEV_ALM"
+      }
+     },
+     "out": {
+      "Output": [
+       {
+        "measure": "ALARM_SUM"
+       },
+       {
+        "io": "R3"
+       }
+      ]
+     },
+     "flags": [],
+     "note": ""
+    }
+   ],
+   "labels": [
+    {
+     "text": "Common alarm",
+     "x": 60,
+     "y": 60
+    }
+   ]
+  }
+ ],
+ "nets": [
+  {
+   "name": "TOUT_F",
+   "type": "Float",
+   "writer": "COMMON/tflt.Output",
+   "readers": [
+    "C1/sstop.A",
+    "C1/sstart.A",
+    "C1/curve.Input",
+    "C2/sstop.A",
+    "C2/sstart.A",
+    "C2/curve.Input"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "TOUT_FAULT",
+   "type": "Enum",
+   "writer": "COMMON/tfd.Output",
+   "readers": [
+    "ALARM/alm.Input1"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "C1_TS_FAULT",
+   "type": "Enum",
+   "writer": "C1/tsfd.Output",
+   "readers": [
+    "ALARM/alm.Input2"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "C1_DEV_ALM",
+   "type": "Enum",
+   "writer": "C1/ddly.Output",
+   "readers": [
+    "ALARM/alm.Input3"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "C2_TS_FAULT",
+   "type": "Enum",
+   "writer": "C2/tsfd.Output",
+   "readers": [
+    "ALARM/alm.Input4"
+   ],
+   "feedback": false
+  },
+  {
+   "name": "C2_DEV_ALM",
+   "type": "Enum",
+   "writer": "C2/ddly.Output",
+   "readers": [
+    "ALARM/alm.Input5"
+   ],
+   "feedback": false
+  }
+ ],
+ "setvalues": [
+  {
+   "name": "TOUT_FALLBACK",
+   "display": "Outdoor fallback temperature",
+   "display_fi": "Outdoor fallback temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 0.0,
+   "min": -30.0,
+   "max": 20.0,
+   "decimals": 1,
+   "pins": [
+    "COMMON/tsub.Input1"
+   ],
+   "fanout": null,
+   "why_settable": "used while the outdoor sensor is faulty; site dependent",
+   "modbus": {
+    "table": "4x",
+    "offset": 0,
+    "writable": true
+   }
+  },
+  {
+   "name": "TOUT_FILT_T",
+   "display": "Outdoor filter time constant",
+   "display_fi": "Outdoor filter time constant",
+   "unit": "s",
+   "type": "Float",
+   "default": 900.0,
+   "min": 10.0,
+   "max": 21600.0,
+   "decimals": 0,
+   "pins": [
+    "COMMON/tflt.TimeConstant"
+   ],
+   "fanout": null,
+   "why_settable": "building inertia; tuned at commissioning",
+   "modbus": {
+    "table": "4x",
+    "offset": 1,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_SUM_STOP",
+   "display": "Circuit 1 summer stop above",
+   "display_fi": "Circuit 1 summer stop above",
+   "unit": "°C",
+   "type": "Float",
+   "default": 18.0,
+   "min": 5.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C1/sstop.B",
+    "C1/svss.B"
+   ],
+   "fanout": null,
+   "why_settable": "seasonal; operator adjusts",
+   "modbus": {
+    "table": "4x",
+    "offset": 2,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_SUM_DLY",
+   "display": "Circuit 1 summer stop delay",
+   "display_fi": "Circuit 1 summer stop delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 3600.0,
+   "min": 0.0,
+   "max": 86400.0,
+   "decimals": 0,
+   "pins": [
+    "C1/sdly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts",
+   "modbus": {
+    "table": "4x",
+    "offset": 3,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_SUM_START",
+   "display": "Circuit 1 heating resumes below",
+   "display_fi": "Circuit 1 heating resumes below",
+   "unit": "°C",
+   "type": "Float",
+   "default": 16.0,
+   "min": 0.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C1/sstart.B",
+    "C1/svss.A"
+   ],
+   "fanout": null,
+   "why_settable": "seasonal; operator adjusts; must be below the stop limit (checked)",
+   "modbus": {
+    "table": "4x",
+    "offset": 4,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_CRV_N20",
+   "display": "Circuit 1 curve at -20 °C outdoor",
+   "display_fi": "Circuit 1 curve at -20 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 58.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "C1/curve.Out_n20"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 5,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_CRV_0",
+   "display": "Circuit 1 curve at 0 °C outdoor",
+   "display_fi": "Circuit 1 curve at 0 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 41.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "C1/curve.Out_0"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 6,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_CRV_P20",
+   "display": "Circuit 1 curve at +20 °C outdoor",
+   "display_fi": "Circuit 1 curve at +20 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 20.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "C1/curve.Out_p20"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 7,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_TS_MIN",
+   "display": "Circuit 1 minimum supply temperature",
+   "display_fi": "Circuit 1 minimum supply temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 18.0,
+   "min": 10.0,
+   "max": 50.0,
+   "decimals": 1,
+   "pins": [
+    "C1/curve.Min",
+    "C1/pmin.Input0",
+    "C1/svmm.A"
+   ],
+   "fanout": null,
+   "why_settable": "commissioning / operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 8,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_TS_MAX",
+   "display": "Circuit 1 maximum supply temperature",
+   "display_fi": "Circuit 1 maximum supply temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 70.0,
+   "min": 20.0,
+   "max": 90.0,
+   "decimals": 1,
+   "pins": [
+    "C1/curve.Max",
+    "C1/pmax.Input0",
+    "C1/svmm.B"
+   ],
+   "fanout": null,
+   "why_settable": "commissioning; protects the heat emitters",
+   "modbus": {
+    "table": "4x",
+    "offset": 9,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_SP_OFFSET",
+   "display": "Circuit 1 setpoint offset",
+   "display_fi": "Circuit 1 setpoint offset",
+   "unit": "°C",
+   "type": "Float",
+   "default": 0.0,
+   "min": -10.0,
+   "max": 10.0,
+   "decimals": 1,
+   "pins": [
+    "C1/offs.Input0"
+   ],
+   "fanout": null,
+   "why_settable": "operator parallel shift of the curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 10,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_SETBACK",
+   "display": "Circuit 1 night setback",
+   "display_fi": "Circuit 1 night setback",
+   "unit": "°C",
+   "type": "Float",
+   "default": 10.0,
+   "min": 0.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C1/nsb.Input0"
+   ],
+   "fanout": null,
+   "why_settable": "operator; how much the supply setpoint drops during setback",
+   "modbus": {
+    "table": "4x",
+    "offset": 11,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_ENABLE",
+   "display": "Circuit 1 enabled",
+   "display_fi": "Circuit 1 enabled",
+   "unit": "",
+   "type": "Enum",
+   "default": 1,
+   "min": 0,
+   "max": 1,
+   "decimals": null,
+   "pins": [
+    "C1/run.Select",
+    "C1/exen.Select"
+   ],
+   "fanout": null,
+   "why_settable": "operator switches the circuit off for service",
+   "modbus": {
+    "table": "4x",
+    "offset": 12,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_EXER_ON",
+   "display": "Circuit 1 pump exercise run time",
+   "display_fi": "Circuit 1 pump exercise run time",
+   "unit": "s",
+   "type": "Float",
+   "default": 120.0,
+   "min": 10.0,
+   "max": 1800.0,
+   "decimals": 0,
+   "pins": [
+    "C1/exer.OnTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 13,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_EXER_OFF",
+   "display": "Circuit 1 pump exercise interval",
+   "display_fi": "Circuit 1 pump exercise interval",
+   "unit": "s",
+   "type": "Float",
+   "default": 604800.0,
+   "min": 3600.0,
+   "max": 2592000.0,
+   "decimals": 0,
+   "pins": [
+    "C1/exer.OffTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator; default 7 days",
+   "modbus": {
+    "table": "4x",
+    "offset": 14,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_PID_P",
+   "display": "Circuit 1 PID proportional band",
+   "display_fi": "Circuit 1 PID proportional band",
+   "unit": "°C",
+   "type": "Float",
+   "default": 40.0,
+   "min": 2.0,
+   "max": 500.0,
+   "decimals": 1,
+   "pins": [
+    "C1/pid.P"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning",
+   "modbus": {
+    "table": "4x",
+    "offset": 15,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_PID_I",
+   "display": "Circuit 1 PID integral time",
+   "display_fi": "Circuit 1 PID integral time",
+   "unit": "s",
+   "type": "Float",
+   "default": 60.0,
+   "min": 5.0,
+   "max": 300.0,
+   "decimals": 0,
+   "pins": [
+    "C1/pid.I"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning; must not be 0 (vendor)",
+   "modbus": {
+    "table": "4x",
+    "offset": 16,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_VLV_FAULT",
+   "display": "Circuit 1 valve position on sensor fault",
+   "display_fi": "Circuit 1 valve position on sensor fault",
+   "unit": "%",
+   "type": "Float",
+   "default": 20.0,
+   "min": 0.0,
+   "max": 100.0,
+   "decimals": 0,
+   "pins": [
+    "C1/vlv.Input1"
+   ],
+   "fanout": null,
+   "why_settable": "site dependent",
+   "modbus": {
+    "table": "4x",
+    "offset": 17,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_DEV_LIM",
+   "display": "Circuit 1 deviation alarm limit",
+   "display_fi": "Circuit 1 deviation alarm limit",
+   "unit": "°C",
+   "type": "Float",
+   "default": 10.0,
+   "min": 1.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C1/dgt.B"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 18,
+    "writable": true
+   }
+  },
+  {
+   "name": "C1_DEV_DLY",
+   "display": "Circuit 1 deviation alarm delay",
+   "display_fi": "Circuit 1 deviation alarm delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 1800.0,
+   "min": 60.0,
+   "max": 14400.0,
+   "decimals": 0,
+   "pins": [
+    "C1/ddly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 19,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_SUM_STOP",
+   "display": "Circuit 2 summer stop above",
+   "display_fi": "Circuit 2 summer stop above",
+   "unit": "°C",
+   "type": "Float",
+   "default": 17.0,
+   "min": 5.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C2/sstop.B",
+    "C2/svss.B"
+   ],
+   "fanout": null,
+   "why_settable": "seasonal; operator adjusts",
+   "modbus": {
+    "table": "4x",
+    "offset": 20,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_SUM_DLY",
+   "display": "Circuit 2 summer stop delay",
+   "display_fi": "Circuit 2 summer stop delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 3600.0,
+   "min": 0.0,
+   "max": 86400.0,
+   "decimals": 0,
+   "pins": [
+    "C2/sdly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts",
+   "modbus": {
+    "table": "4x",
+    "offset": 21,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_SUM_START",
+   "display": "Circuit 2 heating resumes below",
+   "display_fi": "Circuit 2 heating resumes below",
+   "unit": "°C",
+   "type": "Float",
+   "default": 15.0,
+   "min": 0.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C2/sstart.B",
+    "C2/svss.A"
+   ],
+   "fanout": null,
+   "why_settable": "seasonal; operator adjusts; must be below the stop limit (checked)",
+   "modbus": {
+    "table": "4x",
+    "offset": 22,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_CRV_N20",
+   "display": "Circuit 2 curve at -20 °C outdoor",
+   "display_fi": "Circuit 2 curve at -20 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 35.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "C2/curve.Out_n20"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 23,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_CRV_0",
+   "display": "Circuit 2 curve at 0 °C outdoor",
+   "display_fi": "Circuit 2 curve at 0 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 28.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "C2/curve.Out_0"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 24,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_CRV_P20",
+   "display": "Circuit 2 curve at +20 °C outdoor",
+   "display_fi": "Circuit 2 curve at +20 °C outdoor",
+   "unit": "°C",
+   "type": "Float",
+   "default": 22.0,
+   "min": 10.0,
+   "max": 95.0,
+   "decimals": 1,
+   "pins": [
+    "C2/curve.Out_p20"
+   ],
+   "fanout": null,
+   "why_settable": "operator adjusts the heating curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 25,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_TS_MIN",
+   "display": "Circuit 2 minimum supply temperature",
+   "display_fi": "Circuit 2 minimum supply temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 20.0,
+   "min": 10.0,
+   "max": 50.0,
+   "decimals": 1,
+   "pins": [
+    "C2/curve.Min",
+    "C2/pmin.Input0",
+    "C2/svmm.A"
+   ],
+   "fanout": null,
+   "why_settable": "commissioning / operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 26,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_TS_MAX",
+   "display": "Circuit 2 maximum supply temperature",
+   "display_fi": "Circuit 2 maximum supply temperature",
+   "unit": "°C",
+   "type": "Float",
+   "default": 40.0,
+   "min": 20.0,
+   "max": 55.0,
+   "decimals": 1,
+   "pins": [
+    "C2/curve.Max",
+    "C2/pmax.Input0",
+    "C2/svmm.B"
+   ],
+   "fanout": null,
+   "why_settable": "commissioning; protects the heat emitters",
+   "modbus": {
+    "table": "4x",
+    "offset": 27,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_SP_OFFSET",
+   "display": "Circuit 2 setpoint offset",
+   "display_fi": "Circuit 2 setpoint offset",
+   "unit": "°C",
+   "type": "Float",
+   "default": 0.0,
+   "min": -10.0,
+   "max": 10.0,
+   "decimals": 1,
+   "pins": [
+    "C2/offs.Input0"
+   ],
+   "fanout": null,
+   "why_settable": "operator parallel shift of the curve",
+   "modbus": {
+    "table": "4x",
+    "offset": 28,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_SETBACK",
+   "display": "Circuit 2 night setback",
+   "display_fi": "Circuit 2 night setback",
+   "unit": "°C",
+   "type": "Float",
+   "default": 3.0,
+   "min": 0.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C2/nsb.Input0"
+   ],
+   "fanout": null,
+   "why_settable": "operator; how much the supply setpoint drops during setback",
+   "modbus": {
+    "table": "4x",
+    "offset": 29,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_ENABLE",
+   "display": "Circuit 2 enabled",
+   "display_fi": "Circuit 2 enabled",
+   "unit": "",
+   "type": "Enum",
+   "default": 1,
+   "min": 0,
+   "max": 1,
+   "decimals": null,
+   "pins": [
+    "C2/run.Select",
+    "C2/exen.Select"
+   ],
+   "fanout": null,
+   "why_settable": "operator switches the circuit off for service",
+   "modbus": {
+    "table": "4x",
+    "offset": 30,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_EXER_ON",
+   "display": "Circuit 2 pump exercise run time",
+   "display_fi": "Circuit 2 pump exercise run time",
+   "unit": "s",
+   "type": "Float",
+   "default": 120.0,
+   "min": 10.0,
+   "max": 1800.0,
+   "decimals": 0,
+   "pins": [
+    "C2/exer.OnTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 31,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_EXER_OFF",
+   "display": "Circuit 2 pump exercise interval",
+   "display_fi": "Circuit 2 pump exercise interval",
+   "unit": "s",
+   "type": "Float",
+   "default": 604800.0,
+   "min": 3600.0,
+   "max": 2592000.0,
+   "decimals": 0,
+   "pins": [
+    "C2/exer.OffTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator; default 7 days",
+   "modbus": {
+    "table": "4x",
+    "offset": 32,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_PID_P",
+   "display": "Circuit 2 PID proportional band",
+   "display_fi": "Circuit 2 PID proportional band",
+   "unit": "°C",
+   "type": "Float",
+   "default": 30.0,
+   "min": 2.0,
+   "max": 500.0,
+   "decimals": 1,
+   "pins": [
+    "C2/pid.P"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning",
+   "modbus": {
+    "table": "4x",
+    "offset": 33,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_PID_I",
+   "display": "Circuit 2 PID integral time",
+   "display_fi": "Circuit 2 PID integral time",
+   "unit": "s",
+   "type": "Float",
+   "default": 90.0,
+   "min": 5.0,
+   "max": 300.0,
+   "decimals": 0,
+   "pins": [
+    "C2/pid.I"
+   ],
+   "fanout": null,
+   "why_settable": "tuned at commissioning; must not be 0 (vendor)",
+   "modbus": {
+    "table": "4x",
+    "offset": 34,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_VLV_FAULT",
+   "display": "Circuit 2 valve position on sensor fault",
+   "display_fi": "Circuit 2 valve position on sensor fault",
+   "unit": "%",
+   "type": "Float",
+   "default": 0.0,
+   "min": 0.0,
+   "max": 100.0,
+   "decimals": 0,
+   "pins": [
+    "C2/vlv.Input1"
+   ],
+   "fanout": null,
+   "why_settable": "site dependent",
+   "modbus": {
+    "table": "4x",
+    "offset": 35,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_DEV_LIM",
+   "display": "Circuit 2 deviation alarm limit",
+   "display_fi": "Circuit 2 deviation alarm limit",
+   "unit": "°C",
+   "type": "Float",
+   "default": 5.0,
+   "min": 1.0,
+   "max": 30.0,
+   "decimals": 1,
+   "pins": [
+    "C2/dgt.B"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 36,
+    "writable": true
+   }
+  },
+  {
+   "name": "C2_DEV_DLY",
+   "display": "Circuit 2 deviation alarm delay",
+   "display_fi": "Circuit 2 deviation alarm delay",
+   "unit": "s",
+   "type": "Float",
+   "default": 1800.0,
+   "min": 60.0,
+   "max": 14400.0,
+   "decimals": 0,
+   "pins": [
+    "C2/ddly.DelayTime"
+   ],
+   "fanout": null,
+   "why_settable": "operator",
+   "modbus": {
+    "table": "4x",
+    "offset": 37,
+    "writable": true
+   }
+  }
+ ],
+ "timeprograms": [
+  {
+   "name": "C1_TPRG",
+   "display": "Circuit 1 heating time program",
+   "type": "On_Off",
+   "default": 1,
+   "week": [
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0"
+   ],
+   "states": [
+    "Setback",
+    "Comfort"
+   ],
+   "pin": "C1/nsb.Select",
+   "why": "operator sets the comfort periods; 0 = setback, 1 = comfort"
+  },
+  {
+   "name": "C2_TPRG",
+   "display": "Circuit 2 heating time program",
+   "type": "On_Off",
+   "default": 1,
+   "week": [
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0",
+    "00:00=0,06:00=1,22:00=0"
+   ],
+   "states": [
+    "Setback",
+    "Comfort"
+   ],
+   "pin": "C2/nsb.Select",
+   "why": "operator sets the comfort periods; 0 = setback, 1 = comfort"
+  }
+ ],
+ "measures": [
+  {
+   "name": "TOUT_F",
+   "display": "Outdoor temperature, filtered",
+   "display_fi": "Outdoor temperature, filtered",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "COMMON/tflt.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 0,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TOUT_FAULT",
+   "display": "Outdoor sensor fault",
+   "display_fi": "Outdoor sensor fault",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "COMMON/tfd.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 0,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_TS_FAULT",
+   "display": "Circuit 1 supply sensor fault",
+   "display_fi": "Circuit 1 supply sensor fault",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C1/tsfd.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 1,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_SP",
+   "display": "Circuit 1 supply setpoint",
+   "display_fi": "Circuit 1 supply setpoint",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "C1/sp.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 1,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_SUMMER",
+   "display": "Circuit 1 summer stop active",
+   "display_fi": "Circuit 1 summer stop active",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C1/slat.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 2,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_SV_ERR",
+   "display": "Circuit 1 set value conflict",
+   "display_fi": "Circuit 1 set value conflict",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C1/sverr.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 3,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_PUMP",
+   "display": "Circuit 1 pump command",
+   "display_fi": "Circuit 1 pump command",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C1/pump.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 4,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_VALVE",
+   "display": "Circuit 1 valve position",
+   "display_fi": "Circuit 1 valve position",
+   "unit": "%",
+   "decimals": 0,
+   "type": "Float",
+   "source": "C1/vlv.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 2,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C1_DEV_ALM",
+   "display": "Circuit 1 supply deviation alarm",
+   "display_fi": "Circuit 1 supply deviation alarm",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C1/ddly.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 5,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_TS_FAULT",
+   "display": "Circuit 2 supply sensor fault",
+   "display_fi": "Circuit 2 supply sensor fault",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C2/tsfd.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 6,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_SP",
+   "display": "Circuit 2 supply setpoint",
+   "display_fi": "Circuit 2 supply setpoint",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "C2/sp.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 3,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_SUMMER",
+   "display": "Circuit 2 summer stop active",
+   "display_fi": "Circuit 2 summer stop active",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C2/slat.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 7,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_SV_ERR",
+   "display": "Circuit 2 set value conflict",
+   "display_fi": "Circuit 2 set value conflict",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C2/sverr.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 8,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_PUMP",
+   "display": "Circuit 2 pump command",
+   "display_fi": "Circuit 2 pump command",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C2/pump.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 9,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_VALVE",
+   "display": "Circuit 2 valve position",
+   "display_fi": "Circuit 2 valve position",
+   "unit": "%",
+   "decimals": 0,
+   "type": "Float",
+   "source": "C2/vlv.Output",
+   "modbus": {
+    "table": "3x",
+    "offset": 4,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "C2_DEV_ALM",
+   "display": "Circuit 2 supply deviation alarm",
+   "display_fi": "Circuit 2 supply deviation alarm",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "C2/ddly.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 10,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "ALARM_SUM",
+   "display": "Common alarm",
+   "display_fi": "Common alarm",
+   "unit": "",
+   "decimals": null,
+   "type": "Enum",
+   "source": "ALARM/alm.Output",
+   "modbus": {
+    "table": "1x",
+    "offset": 11,
+    "writable": false
+   },
+   "why": ""
+  },
+  {
+   "name": "TOUT",
+   "display": "Outdoor temperature, raw",
+   "display_fi": "Outdoor temperature, raw",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 1",
+   "modbus": {
+    "table": "3x",
+    "offset": 5,
+    "writable": false
+   },
+   "why": "physical point"
+  },
+  {
+   "name": "TP_SUP",
+   "display": "DH primary supply temperature",
+   "display_fi": "DH primary supply temperature",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 2",
+   "modbus": {
+    "table": "3x",
+    "offset": 6,
+    "writable": false
+   },
+   "why": "physical point"
+  },
+  {
+   "name": "TP_RET",
+   "display": "DH primary return temperature",
+   "display_fi": "DH primary return temperature",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 3",
+   "modbus": {
+    "table": "3x",
+    "offset": 7,
+    "writable": false
+   },
+   "why": "physical point"
+  },
+  {
+   "name": "C1_TS",
+   "display": "Circuit 1 supply temperature",
+   "display_fi": "Circuit 1 supply temperature",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 4",
+   "modbus": {
+    "table": "3x",
+    "offset": 8,
+    "writable": false
+   },
+   "why": "physical point"
+  },
+  {
+   "name": "C2_TS",
+   "display": "Circuit 2 supply temperature",
+   "display_fi": "Circuit 2 supply temperature",
+   "unit": "°C",
+   "decimals": 1,
+   "type": "Float",
+   "source": "io:UI 5",
+   "modbus": {
+    "table": "3x",
+    "offset": 9,
+    "writable": false
+   },
+   "why": "physical point"
+  }
+ ],
+ "io": [
+  {
+   "point": "UI 1",
+   "pin": "TOUT_IN",
+   "description": "Outdoor temperature",
+   "description_fi": "Outdoor temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [
+    "COMMON/tlo.A",
+    "COMMON/thi.A",
+    "COMMON/tsub.Input0"
+   ],
+   "driven_by": []
+  },
+  {
+   "point": "UI 2",
+   "pin": "TP_SUP_IN",
+   "description": "District heating primary supply temperature",
+   "description_fi": "District heating primary supply temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [],
+   "driven_by": []
+  },
+  {
+   "point": "UI 3",
+   "pin": "TP_RET_IN",
+   "description": "District heating primary return temperature",
+   "description_fi": "District heating primary return temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [],
+   "driven_by": []
+  },
+  {
+   "point": "UI 4",
+   "pin": "C1_TS_IN",
+   "description": "Circuit 1 supply temperature",
+   "description_fi": "Circuit 1 supply temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [
+    "C1/tslo.A",
+    "C1/tshi.A",
+    "C1/pid.Measure",
+    "C1/dev.A"
+   ],
+   "driven_by": []
+  },
+  {
+   "point": "UI 5",
+   "pin": "C2_TS_IN",
+   "description": "Circuit 2 supply temperature",
+   "description_fi": "Circuit 2 supply temperature",
+   "dir": "in",
+   "kind": "NTC",
+   "used_by": [
+    "C2/tslo.A",
+    "C2/tshi.A",
+    "C2/pid.Measure",
+    "C2/dev.A"
+   ],
+   "driven_by": []
+  },
+  {
+   "point": "AO 1",
+   "pin": "C1_VLV_OUT",
+   "description": "Circuit 1 control valve 0..100 %",
+   "description_fi": "Circuit 1 control valve 0..100 %",
+   "dir": "out",
+   "kind": "AO 0-10V",
+   "scale": "0..100 % -> 0..10 V assumed; build owner confirms AO scaling",
+   "used_by": [],
+   "driven_by": [
+    "C1/vlv.Output"
+   ]
+  },
+  {
+   "point": "AO 2",
+   "pin": "C2_VLV_OUT",
+   "description": "Circuit 2 control valve 0..100 %",
+   "description_fi": "Circuit 2 control valve 0..100 %",
+   "dir": "out",
+   "kind": "AO 0-10V",
+   "scale": "0..100 % -> 0..10 V assumed; build owner confirms AO scaling",
+   "used_by": [],
+   "driven_by": [
+    "C2/vlv.Output"
+   ]
+  },
+  {
+   "point": "R1",
+   "pin": "C1_PUMP_OUT",
+   "description": "Circuit 1 circulation pump start",
+   "description_fi": "Circuit 1 circulation pump start",
+   "dir": "out",
+   "kind": "relay",
+   "used_by": [],
+   "driven_by": [
+    "C1/pump.Output"
+   ]
+  },
+  {
+   "point": "R2",
+   "pin": "C2_PUMP_OUT",
+   "description": "Circuit 2 circulation pump start",
+   "description_fi": "Circuit 2 circulation pump start",
+   "dir": "out",
+   "kind": "relay",
+   "used_by": [],
+   "driven_by": [
+    "C2/pump.Output"
+   ]
+  },
+  {
+   "point": "R3",
+   "pin": "ALARM_OUT",
+   "description": "Common alarm relay (energised = alarm)",
+   "description_fi": "Common alarm relay (energised = alarm)",
+   "dir": "out",
+   "kind": "relay",
+   "used_by": [],
+   "driven_by": [
+    "ALARM/alm.Output"
+   ]
+  }
+ ],
+ "alarms": [
+  {
+   "name": "TOUT_FAULT",
+   "text": "Outdoor sensor fault",
+   "source": "COMMON/tfd.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "C1_TS_FAULT",
+   "text": "Circuit 1 supply sensor fault",
+   "source": "C1/tsfd.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "C1_DEV_ALM",
+   "text": "Circuit 1 supply temperature deviation",
+   "source": "C1/ddly.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "C2_TS_FAULT",
+   "text": "Circuit 2 supply sensor fault",
+   "source": "C2/tsfd.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  },
+  {
+   "name": "C2_DEV_ALM",
+   "text": "Circuit 2 supply temperature deviation",
+   "source": "C2/ddly.Output",
+   "in_alarm_sum": true,
+   "latching": false,
+   "net": true,
+   "ouman_alarm_object": "none: alarm objects are not supported by the build yet; status bit + common alarm relay"
+  }
+ ],
+ "left_out": [
+  {
+   "item": "Domestic hot water",
+   "reason": "not part of this substation"
+  },
+  {
+   "item": "Valve exercise",
+   "reason": "opening the DH valve with the pump running in summer pushes primary-temperature water into the circuit (unsafe for floor heating); no documented exercise block; pump exercise only"
+  },
+  {
+   "item": "Room temperature compensation",
+   "reason": "no room sensor; a fixed setpoint offset set value instead"
+  },
+  {
+   "item": "Alarm objects (AnalogAlarm, DeviationAlarm, BinaryAlarm), acknowledgement, alarm routing",
+   "reason": "alarm objects are unsolved in the tool; alarms are status bits and one common relay, non-latching"
+  },
+  {
+   "item": "Pump fault / run feedback input",
+   "reason": "kept simple; no feedback contact assumed"
+  },
+  {
+   "item": "Floor heating over-temperature safety thermostat",
+   "reason": "must be hard-wired in the pump circuit, not software"
+  },
+  {
+   "item": "Return temperature limitation, primary flow/energy metering",
+   "reason": "primary temperatures are measurements only"
+  },
+  {
+   "item": "Frost protection of the circuits in summer",
+   "reason": "summer stop releases below the restart limit; no separate frost logic"
+  },
+  {
+   "item": "Local/remote set value patterns, run-time counters, manual overrides",
+   "reason": "SetPointSync/StateSync/RunTimeCounter/Override arrive with vendor objects; avoided"
+  }
+ ],
+ "notes": [
+  "Modbus: set values 1000+n, analog measurements 1100+n, binary status 1150+n (n = table offset); all Holding registers; registers 2..7 and 14 are system registers; the exported document shows each number +1.",
+  "Execution order: COMMON, C1, C2, ALARM. Circuits read TOUT_F from COMMON in the same cycle; ALARM reads every alarm net in the same cycle.",
+  "Setpoint = min(max(CurveOut + offset - setback, TS_MIN), TS_MAX): offset and night setback applied before the limits; the maximum limit wins if TS_MIN > TS_MAX (status bit SV_ERR). Curve_3p Min/Max carry the same set values but its cut Output is not used.",
+  "Summer stop: stop when filtered outdoor > SUM_STOP for SUM_DLY s; heating resumes at once when it is < SUM_START. Reset-dominant latch: overlapping limits give heating (status bit SV_ERR).",
+  "Pid RevPDisable left at the library default (30 °C): the vendor texts of 4.2 and 5.1 contradict each other.",
+  "AO scaling assumed 0..100 % = 0..10 V; confirm in the build."
+ ]
+}

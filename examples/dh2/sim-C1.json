@@ -1,0 +1,471 @@
+{
+  "name": "dh2 C1 radiator circuit, against DESCRIPTION.md section 3 (simulator, one application)",
+  "doc": "python pipeline/sim_test.py 'C:\\agentwork\\apps\\dh2\\C1.ouear' examples/dh2/sim-C1.json",
+  "factor": 100,
+  "cases": [
+    {
+      "name": "3.2 heating curve, offset and limits",
+      "steps": [
+        {
+          "note": "time program to Comfort all week, so the cases do not depend on the time of day (kept for the following cases)"
+        },
+        {
+          "week": {
+            "C1_TPRG": "on"
+          }
+        },
+        {
+          "set": {
+            "C1_TS_IN": 41,
+            "TOUT_F_N": -20
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 58
+          }
+        },
+        {
+          "set": {
+            "TOUT_F_N": 0
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 41
+          }
+        },
+        {
+          "set": {
+            "TOUT_F_N": 10
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 30.5
+          }
+        },
+        {
+          "set": {
+            "C1_SP_OFFSET": 5
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 35.5
+          }
+        },
+        {
+          "note": "offset before the limits: -20 C gives 58 + 5, cut to TS_MAX"
+        },
+        {
+          "set": {
+            "TOUT_F_N": -20,
+            "C1_TS_MAX": 60
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 60
+          }
+        },
+        {
+          "set": {
+            "TOUT_F_N": 20,
+            "C1_SP_OFFSET": -5
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 18
+          }
+        },
+        {
+          "note": "TS_MIN > TS_MAX: maximum wins, SV_ERR raised"
+        },
+        {
+          "set": {
+            "C1_TS_MIN": 50,
+            "C1_TS_MAX": 40
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 40,
+            "C1_SV_ERR": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.3 summer stop after SUM_DLY, latch between the limits, restart below SUM_START",
+      "steps": [
+        {
+          "set": {
+            "C1_TS_IN": 41,
+            "TOUT_F_N": 20
+          }
+        },
+        {
+          "wait": "50m"
+        },
+        {
+          "expect": {
+            "C1_SUMMER": false,
+            "C1_PUMP": true
+          }
+        },
+        {
+          "wait": "15m"
+        },
+        {
+          "expect": {
+            "C1_SUMMER": true,
+            "C1_PUMP": false,
+            "C1_VALVE": 0
+          }
+        },
+        {
+          "set": {
+            "TOUT_F_N": 17
+          }
+        },
+        {
+          "wait": "5m"
+        },
+        {
+          "expect": {
+            "C1_SUMMER": true
+          }
+        },
+        {
+          "set": {
+            "TOUT_F_N": 15
+          }
+        },
+        {
+          "until": {
+            "C1_SUMMER": false
+          },
+          "max": "30s"
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_PUMP": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.5 supply sensor fault: valve to VLV_FAULT, alarm after 10 s, clears when plausible",
+      "steps": [
+        {
+          "set": {
+            "TOUT_F_N": 0,
+            "C1_TS_IN": 130
+          }
+        },
+        {
+          "until": {
+            "C1_TS_FAULT": true
+          },
+          "max": "60s"
+        },
+        {
+          "wait": "5s"
+        },
+        {
+          "expect": {
+            "C1_VALVE": 20,
+            "C1_PUMP": true
+          }
+        },
+        {
+          "set": {
+            "C1_TS_IN": 41
+          }
+        },
+        {
+          "until": {
+            "C1_TS_FAULT": false
+          },
+          "max": "30s"
+        }
+      ]
+    },
+    {
+      "name": "3.3 / 3.4 circuit disabled: pump off, valve closed",
+      "steps": [
+        {
+          "set": {
+            "TOUT_F_N": 0,
+            "C1_TS_IN": 30
+          }
+        },
+        {
+          "wait": "10s"
+        },
+        {
+          "expect": {
+            "C1_PUMP": true
+          }
+        },
+        {
+          "set": {
+            "C1_ENABLE": 0
+          }
+        },
+        {
+          "wait": "5s"
+        },
+        {
+          "expect": {
+            "C1_PUMP": false,
+            "C1_VALVE": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.6 deviation alarm after DEV_DLY, clears at once",
+      "steps": [
+        {
+          "note": "start without deviation, so the delay starts at the step change"
+        },
+        {
+          "set": {
+            "TOUT_F_N": 0,
+            "C1_TS_IN": 41
+          }
+        },
+        {
+          "wait": "5m"
+        },
+        {
+          "expect": {
+            "C1_DEV_ALM": false
+          }
+        },
+        {
+          "set": {
+            "C1_TS_IN": 20
+          }
+        },
+        {
+          "wait": "25m"
+        },
+        {
+          "expect": {
+            "C1_DEV_ALM": false
+          }
+        },
+        {
+          "wait": "10m"
+        },
+        {
+          "expect": {
+            "C1_DEV_ALM": true
+          }
+        },
+        {
+          "set": {
+            "C1_TS_IN": 41
+          }
+        },
+        {
+          "until": {
+            "C1_DEV_ALM": false
+          },
+          "max": "30s"
+        }
+      ]
+    },
+    {
+      "name": "3.4 pump exercise in summer stop starts with the off period",
+      "steps": [
+        {
+          "note": "pulse 900 s: at factor 100 one ~3 s poll is ~5 min simulated, so a 120 s pulse can fall between two reads"
+        },
+        {
+          "set": {
+            "C1_SUM_DLY": 0,
+            "C1_EXER_OFF": 3600,
+            "C1_EXER_ON": 900,
+            "C1_TS_IN": 41,
+            "TOUT_F_N": 20
+          }
+        },
+        {
+          "until": {
+            "C1_SUMMER": true
+          },
+          "max": "60s"
+        },
+        {
+          "wait": "40m"
+        },
+        {
+          "expect": {
+            "C1_PUMP": false
+          }
+        },
+        {
+          "until": {
+            "C1_PUMP": true
+          },
+          "max": "40m"
+        },
+        {
+          "expect": {
+            "C1_VALVE": 0
+          }
+        },
+        {
+          "until": {
+            "C1_PUMP": false
+          },
+          "max": "20m"
+        }
+      ]
+    },
+    {
+      "name": "4 set value written below its minimum (EXER_OFF min 3600)",
+      "steps": [
+        {
+          "set": {
+            "C1_EXER_OFF": 600
+          }
+        },
+        {
+          "wait": "10s"
+        },
+        {
+          "expect": {
+            "C1_EXER_OFF": 3600
+          }
+        },
+        {
+          "note": "simulator: an out-of-range write is clamped to the limit (real controller not checked)"
+        }
+      ]
+    },
+    {
+      "name": "3.8 night setback: time program 0 lowers the setpoint by SETBACK, before the limits",
+      "steps": [
+        {
+          "week": {
+            "C1_TPRG": "off"
+          }
+        },
+        {
+          "set": {
+            "C1_TS_IN": 41,
+            "TOUT_F_N": 0
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_TPRG": 0,
+            "C1_SP": 31
+          }
+        },
+        {
+          "set": {
+            "C1_SETBACK": 5,
+            "C1_SP_OFFSET": 2
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 38
+          }
+        },
+        {
+          "note": "setback stops at TS_MIN"
+        },
+        {
+          "set": {
+            "TOUT_F_N": 20,
+            "C1_SETBACK": 30
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 18
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.8 comfort: time program 1, no setback",
+      "steps": [
+        {
+          "week": {
+            "C1_TPRG": "on"
+          }
+        },
+        {
+          "set": {
+            "C1_TS_IN": 41,
+            "TOUT_F_N": 0
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_TPRG": 1,
+            "C1_SP": 41
+          }
+        },
+        {
+          "set": {
+            "C1_SETBACK": 20
+          }
+        },
+        {
+          "wait": "2s"
+        },
+        {
+          "expect": {
+            "C1_SP": 41
+          }
+        }
+      ]
+    }
+  ]
+}

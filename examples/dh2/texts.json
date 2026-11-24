@@ -1,0 +1,499 @@
+{
+ "_note": "Translations of everything a user reads, for program.json languages. The plan holds English; points: display name per language (set values, measurements, physical I/O by plan pin name); states: texts of binary points [off, on] per language, English included. The local HMI menu texts sit in program.json hmi (one key per language).",
+ "points": {
+  "TOUT_FALLBACK": {
+   "fi": "Ulkolämpötilan vara-arvo",
+   "sv": "Utetemperatur, reservvärde"
+  },
+  "TOUT_FILT_T": {
+   "fi": "Ulkolämpötilan suodatusaika",
+   "sv": "Utetemperatur, filtertid"
+  },
+  "TOUT_F": {
+   "fi": "Ulkolämpötila, suodatettu",
+   "sv": "Utetemperatur, filtrerad"
+  },
+  "TOUT_FAULT": {
+   "fi": "Ulkoanturin vika",
+   "sv": "Utegivarfel"
+  },
+  "ALARM_SUM": {
+   "fi": "Yhteishälytys",
+   "sv": "Summalarm"
+  },
+  "TOUT_IN": {
+   "fi": "Ulkolämpötila",
+   "sv": "Utetemperatur"
+  },
+  "TP_SUP_IN": {
+   "fi": "Kaukolämmön ensiöpuolen menolämpötila",
+   "sv": "Fjärrvärme, primär framledningstemperatur"
+  },
+  "TP_RET_IN": {
+   "fi": "Kaukolämmön ensiöpuolen paluulämpötila",
+   "sv": "Fjärrvärme, primär returtemperatur"
+  },
+  "ALARM_OUT": {
+   "fi": "Yhteishälytysrele (vetää = hälytys)",
+   "sv": "Summalarmrelä (dragen = larm)"
+  },
+  "C1_SUM_STOP": {
+   "fi": "Lämmityspiiri 1 kesäkatkaisuraja",
+   "sv": "Värmekrets 1 sommarstoppsgräns"
+  },
+  "C1_SUM_DLY": {
+   "fi": "Lämmityspiiri 1 kesäkatkaisun viive",
+   "sv": "Värmekrets 1 fördröjning sommarstopp"
+  },
+  "C1_SUM_START": {
+   "fi": "Lämmityspiiri 1 lämmityksen alkamisraja",
+   "sv": "Värmekrets 1 gräns för värmestart"
+  },
+  "C1_CRV_N20": {
+   "fi": "Lämmityspiiri 1 käyrä ulkolämpötilassa -20 °C",
+   "sv": "Värmekrets 1 kurva vid -20 °C ute"
+  },
+  "C1_CRV_0": {
+   "fi": "Lämmityspiiri 1 käyrä ulkolämpötilassa 0 °C",
+   "sv": "Värmekrets 1 kurva vid 0 °C ute"
+  },
+  "C1_CRV_P20": {
+   "fi": "Lämmityspiiri 1 käyrä ulkolämpötilassa +20 °C",
+   "sv": "Värmekrets 1 kurva vid +20 °C ute"
+  },
+  "C1_TS_MIN": {
+   "fi": "Lämmityspiiri 1 menoveden minimilämpötila",
+   "sv": "Värmekrets 1 lägsta framledningstemperatur"
+  },
+  "C1_TS_MAX": {
+   "fi": "Lämmityspiiri 1 menoveden maksimilämpötila",
+   "sv": "Värmekrets 1 högsta framledningstemperatur"
+  },
+  "C1_SP_OFFSET": {
+   "fi": "Lämmityspiiri 1 asetusarvon siirto",
+   "sv": "Värmekrets 1 börvärdesförskjutning"
+  },
+  "C1_ENABLE": {
+   "fi": "Lämmityspiiri 1 käytössä",
+   "sv": "Värmekrets 1 i drift"
+  },
+  "C1_EXER_ON": {
+   "fi": "Lämmityspiiri 1 pumpun koeajon kesto",
+   "sv": "Värmekrets 1 pumpmotion, gångtid"
+  },
+  "C1_EXER_OFF": {
+   "fi": "Lämmityspiiri 1 pumpun koeajoväli",
+   "sv": "Värmekrets 1 pumpmotion, intervall"
+  },
+  "C1_PID_P": {
+   "fi": "Lämmityspiiri 1 säätimen P-alue",
+   "sv": "Värmekrets 1 regulatorns P-band"
+  },
+  "C1_PID_I": {
+   "fi": "Lämmityspiiri 1 säätimen I-aika",
+   "sv": "Värmekrets 1 regulatorns I-tid"
+  },
+  "C1_VLV_FAULT": {
+   "fi": "Lämmityspiiri 1 venttiilin asento anturivikatilassa",
+   "sv": "Värmekrets 1 ventilläge vid givarfel"
+  },
+  "C1_DEV_LIM": {
+   "fi": "Lämmityspiiri 1 poikkeamahälytyksen raja",
+   "sv": "Värmekrets 1 larmgräns för avvikelse"
+  },
+  "C1_DEV_DLY": {
+   "fi": "Lämmityspiiri 1 poikkeamahälytyksen viive",
+   "sv": "Värmekrets 1 fördröjning avvikelselarm"
+  },
+  "C1_TS_FAULT": {
+   "fi": "Lämmityspiiri 1 menovesianturin vika",
+   "sv": "Värmekrets 1 givarfel framledning"
+  },
+  "C1_SP": {
+   "fi": "Lämmityspiiri 1 menoveden asetusarvo",
+   "sv": "Värmekrets 1 börvärde framledning"
+  },
+  "C1_SUMMER": {
+   "fi": "Lämmityspiiri 1 kesäkatkaisu päällä",
+   "sv": "Värmekrets 1 sommarstopp aktivt"
+  },
+  "C1_SV_ERR": {
+   "fi": "Lämmityspiiri 1 asetusarvoristiriita",
+   "sv": "Värmekrets 1 motstridiga börvärden"
+  },
+  "C1_PUMP": {
+   "fi": "Lämmityspiiri 1 pumpun ohjaus",
+   "sv": "Värmekrets 1 pumpstyrning"
+  },
+  "C1_VALVE": {
+   "fi": "Lämmityspiiri 1 venttiilin asento",
+   "sv": "Värmekrets 1 ventilläge"
+  },
+  "C1_DEV_ALM": {
+   "fi": "Lämmityspiiri 1 menoveden poikkeamahälytys",
+   "sv": "Värmekrets 1 avvikelselarm framledning"
+  },
+  "C1_TS_IN": {
+   "fi": "Lämmityspiiri 1 menoveden lämpötila",
+   "sv": "Värmekrets 1 framledningstemperatur"
+  },
+  "C1_VLV_OUT": {
+   "fi": "Lämmityspiiri 1 säätöventtiili 0..100 %",
+   "sv": "Värmekrets 1 styrventil 0..100 %"
+  },
+  "C1_PUMP_OUT": {
+   "fi": "Lämmityspiiri 1 kiertovesipumpun käynti",
+   "sv": "Värmekrets 1 cirkulationspump, start"
+  },
+  "C2_SUM_STOP": {
+   "fi": "Lämmityspiiri 2 kesäkatkaisuraja",
+   "sv": "Värmekrets 2 sommarstoppsgräns"
+  },
+  "C2_SUM_DLY": {
+   "fi": "Lämmityspiiri 2 kesäkatkaisun viive",
+   "sv": "Värmekrets 2 fördröjning sommarstopp"
+  },
+  "C2_SUM_START": {
+   "fi": "Lämmityspiiri 2 lämmityksen alkamisraja",
+   "sv": "Värmekrets 2 gräns för värmestart"
+  },
+  "C2_CRV_N20": {
+   "fi": "Lämmityspiiri 2 käyrä ulkolämpötilassa -20 °C",
+   "sv": "Värmekrets 2 kurva vid -20 °C ute"
+  },
+  "C2_CRV_0": {
+   "fi": "Lämmityspiiri 2 käyrä ulkolämpötilassa 0 °C",
+   "sv": "Värmekrets 2 kurva vid 0 °C ute"
+  },
+  "C2_CRV_P20": {
+   "fi": "Lämmityspiiri 2 käyrä ulkolämpötilassa +20 °C",
+   "sv": "Värmekrets 2 kurva vid +20 °C ute"
+  },
+  "C2_TS_MIN": {
+   "fi": "Lämmityspiiri 2 menoveden minimilämpötila",
+   "sv": "Värmekrets 2 lägsta framledningstemperatur"
+  },
+  "C2_TS_MAX": {
+   "fi": "Lämmityspiiri 2 menoveden maksimilämpötila",
+   "sv": "Värmekrets 2 högsta framledningstemperatur"
+  },
+  "C2_SP_OFFSET": {
+   "fi": "Lämmityspiiri 2 asetusarvon siirto",
+   "sv": "Värmekrets 2 börvärdesförskjutning"
+  },
+  "C2_ENABLE": {
+   "fi": "Lämmityspiiri 2 käytössä",
+   "sv": "Värmekrets 2 i drift"
+  },
+  "C2_EXER_ON": {
+   "fi": "Lämmityspiiri 2 pumpun koeajon kesto",
+   "sv": "Värmekrets 2 pumpmotion, gångtid"
+  },
+  "C2_EXER_OFF": {
+   "fi": "Lämmityspiiri 2 pumpun koeajoväli",
+   "sv": "Värmekrets 2 pumpmotion, intervall"
+  },
+  "C2_PID_P": {
+   "fi": "Lämmityspiiri 2 säätimen P-alue",
+   "sv": "Värmekrets 2 regulatorns P-band"
+  },
+  "C2_PID_I": {
+   "fi": "Lämmityspiiri 2 säätimen I-aika",
+   "sv": "Värmekrets 2 regulatorns I-tid"
+  },
+  "C2_VLV_FAULT": {
+   "fi": "Lämmityspiiri 2 venttiilin asento anturivikatilassa",
+   "sv": "Värmekrets 2 ventilläge vid givarfel"
+  },
+  "C2_DEV_LIM": {
+   "fi": "Lämmityspiiri 2 poikkeamahälytyksen raja",
+   "sv": "Värmekrets 2 larmgräns för avvikelse"
+  },
+  "C2_DEV_DLY": {
+   "fi": "Lämmityspiiri 2 poikkeamahälytyksen viive",
+   "sv": "Värmekrets 2 fördröjning avvikelselarm"
+  },
+  "C2_TS_FAULT": {
+   "fi": "Lämmityspiiri 2 menovesianturin vika",
+   "sv": "Värmekrets 2 givarfel framledning"
+  },
+  "C2_SP": {
+   "fi": "Lämmityspiiri 2 menoveden asetusarvo",
+   "sv": "Värmekrets 2 börvärde framledning"
+  },
+  "C2_SUMMER": {
+   "fi": "Lämmityspiiri 2 kesäkatkaisu päällä",
+   "sv": "Värmekrets 2 sommarstopp aktivt"
+  },
+  "C2_SV_ERR": {
+   "fi": "Lämmityspiiri 2 asetusarvoristiriita",
+   "sv": "Värmekrets 2 motstridiga börvärden"
+  },
+  "C2_PUMP": {
+   "fi": "Lämmityspiiri 2 pumpun ohjaus",
+   "sv": "Värmekrets 2 pumpstyrning"
+  },
+  "C2_VALVE": {
+   "fi": "Lämmityspiiri 2 venttiilin asento",
+   "sv": "Värmekrets 2 ventilläge"
+  },
+  "C2_DEV_ALM": {
+   "fi": "Lämmityspiiri 2 menoveden poikkeamahälytys",
+   "sv": "Värmekrets 2 avvikelselarm framledning"
+  },
+  "C2_TS_IN": {
+   "fi": "Lämmityspiiri 2 menoveden lämpötila",
+   "sv": "Värmekrets 2 framledningstemperatur"
+  },
+  "C2_VLV_OUT": {
+   "fi": "Lämmityspiiri 2 säätöventtiili 0..100 %",
+   "sv": "Värmekrets 2 styrventil 0..100 %"
+  },
+  "C2_PUMP_OUT": {
+   "fi": "Lämmityspiiri 2 kiertovesipumpun käynti",
+   "sv": "Värmekrets 2 cirkulationspump, start"
+  },
+  "C1_TPRG": {
+   "fi": "Lämmityspiiri 1 aikaohjelma",
+   "sv": "Värmekrets 1 tidsprogram"
+  },
+  "C1_SETBACK": {
+   "fi": "Lämmityspiiri 1 menoveden pudotus",
+   "sv": "Värmekrets 1 sänkning framledning"
+  },
+  "C2_TPRG": {
+   "fi": "Lämmityspiiri 2 aikaohjelma",
+   "sv": "Värmekrets 2 tidsprogram"
+  },
+  "C2_SETBACK": {
+   "fi": "Lämmityspiiri 2 menoveden pudotus",
+   "sv": "Värmekrets 2 sänkning framledning"
+  }
+ },
+ "states": {
+  "C1_ENABLE": {
+   "en": [
+    "Off",
+    "On"
+   ],
+   "fi": [
+    "Pois",
+    "Päällä"
+   ],
+   "sv": [
+    "Från",
+    "Till"
+   ]
+  },
+  "C1_PUMP": {
+   "en": [
+    "Off",
+    "On"
+   ],
+   "fi": [
+    "Pois",
+    "Päällä"
+   ],
+   "sv": [
+    "Från",
+    "Till"
+   ]
+  },
+  "C1_SUMMER": {
+   "en": [
+    "No",
+    "Yes"
+   ],
+   "fi": [
+    "Ei",
+    "Kyllä"
+   ],
+   "sv": [
+    "Nej",
+    "Ja"
+   ]
+  },
+  "C1_SV_ERR": {
+   "en": [
+    "No",
+    "Yes"
+   ],
+   "fi": [
+    "Ei",
+    "Kyllä"
+   ],
+   "sv": [
+    "Nej",
+    "Ja"
+   ]
+  },
+  "C1_TS_FAULT": {
+   "en": [
+    "Normal",
+    "Alarm"
+   ],
+   "fi": [
+    "Normaali",
+    "Hälytys"
+   ],
+   "sv": [
+    "Normal",
+    "Larm"
+   ]
+  },
+  "C1_DEV_ALM": {
+   "en": [
+    "Normal",
+    "Alarm"
+   ],
+   "fi": [
+    "Normaali",
+    "Hälytys"
+   ],
+   "sv": [
+    "Normal",
+    "Larm"
+   ]
+  },
+  "C2_ENABLE": {
+   "en": [
+    "Off",
+    "On"
+   ],
+   "fi": [
+    "Pois",
+    "Päällä"
+   ],
+   "sv": [
+    "Från",
+    "Till"
+   ]
+  },
+  "C2_PUMP": {
+   "en": [
+    "Off",
+    "On"
+   ],
+   "fi": [
+    "Pois",
+    "Päällä"
+   ],
+   "sv": [
+    "Från",
+    "Till"
+   ]
+  },
+  "C2_SUMMER": {
+   "en": [
+    "No",
+    "Yes"
+   ],
+   "fi": [
+    "Ei",
+    "Kyllä"
+   ],
+   "sv": [
+    "Nej",
+    "Ja"
+   ]
+  },
+  "C2_SV_ERR": {
+   "en": [
+    "No",
+    "Yes"
+   ],
+   "fi": [
+    "Ei",
+    "Kyllä"
+   ],
+   "sv": [
+    "Nej",
+    "Ja"
+   ]
+  },
+  "C2_TS_FAULT": {
+   "en": [
+    "Normal",
+    "Alarm"
+   ],
+   "fi": [
+    "Normaali",
+    "Hälytys"
+   ],
+   "sv": [
+    "Normal",
+    "Larm"
+   ]
+  },
+  "C2_DEV_ALM": {
+   "en": [
+    "Normal",
+    "Alarm"
+   ],
+   "fi": [
+    "Normaali",
+    "Hälytys"
+   ],
+   "sv": [
+    "Normal",
+    "Larm"
+   ]
+  },
+  "TOUT_FAULT": {
+   "en": [
+    "Normal",
+    "Alarm"
+   ],
+   "fi": [
+    "Normaali",
+    "Hälytys"
+   ],
+   "sv": [
+    "Normal",
+    "Larm"
+   ]
+  },
+  "ALARM_SUM": {
+   "en": [
+    "Normal",
+    "Alarm"
+   ],
+   "fi": [
+    "Normaali",
+    "Hälytys"
+   ],
+   "sv": [
+    "Normal",
+    "Larm"
+   ]
+  },
+  "C1_TPRG": {
+   "en": [
+    "Setback",
+    "Comfort"
+   ],
+   "fi": [
+    "Pudotus",
+    "Normaali"
+   ],
+   "sv": [
+    "Sänkning",
+    "Normal"
+   ]
+  },
+  "C2_TPRG": {
+   "en": [
+    "Setback",
+    "Comfort"
+   ],
+   "fi": [
+    "Pudotus",
+    "Normaali"
+   ],
+   "sv": [
+    "Sänkning",
+    "Normal"
+   ]
+  }
+ }
+}

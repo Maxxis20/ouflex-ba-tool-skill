@@ -1,0 +1,592 @@
+{
+ "name": "dh2",
+ "plan": "plan.json",
+ "out": "build",
+ "paths": {
+  "apps": "C:\\agentwork\\apps\\dh2",
+  "project": "C:\\agentwork\\proj\\dh2",
+  "base": "new",
+  "modbus_doc": "C:\\agentwork\\proj\\dh2_modbus"
+ },
+ "modules": [],
+ "polarity": "Normal",
+ "modbus": {
+  "base": 1000,
+  "areas": {
+   "4x": 0,
+   "3x": 100,
+   "1x": 150
+  },
+  "formats": {
+   "default": "S16"
+  },
+  "local_off_bus": true
+ },
+ "required_fill": {},
+ "io_kinds": {
+  "AO 0-10V": {
+   "phys": "Analog",
+   "devtype": "TX_OUT",
+   "min": 0,
+   "max": 100,
+   "unit": "%",
+   "decimals": 1,
+   "vt": "Float"
+  }
+ },
+ "_notes": {
+  "modbus": "one rule: Holding registers only (the only kind the slave offers); set values 1000+n, analog measurements 1100+n, status bits 1150+n, n = declaration order; clear of system registers 2..7, 14 and the automatic 201..",
+  "AO": "AO default in a new project is TX_OUT 0..100 %; set explicitly so the verification checks it"
+ },
+ "hmi": {
+  "_note": "device local HMI (row display) menu, built after the device stage: folders and rows dropped from each application's generated menu by point or curve block name. Texts: one key per language (en, fi, sv); English goes to every language first. Labels about 20 characters for the row display. State texts of binary points: texts.json.",
+  "menu": [
+   {
+    "en": "Heating circuit 1",
+    "fi": "Lämmityspiiri 1",
+    "items": [
+     {
+      "app": "C1",
+      "point": "C1_SP",
+      "en": "Supply setpoint",
+      "fi": "Menoveden asetusarvo",
+      "sv": "Börvärde framledning"
+     },
+     {
+      "app": "C1",
+      "point": "C1_TS_IN",
+      "en": "Supply temperature",
+      "fi": "Menoveden lämpötila",
+      "sv": "Framledningstemp."
+     },
+     {
+      "app": "C1",
+      "point": "C1_VALVE",
+      "en": "Valve position",
+      "fi": "Venttiilin asento",
+      "sv": "Ventilläge"
+     },
+     {
+      "app": "C1",
+      "point": "C1_PUMP",
+      "en": "Pump",
+      "fi": "Pumppu",
+      "sv": "Pump"
+     },
+     {
+      "app": "C1",
+      "point": "C1_SUMMER",
+      "en": "Summer stop",
+      "fi": "Kesäkatkaisu",
+      "sv": "Sommarstopp"
+     },
+     {
+      "app": "C1",
+      "point": "C1_TPRG",
+      "en": "Time program",
+      "fi": "Aikaohjelma",
+      "sv": "Tidsprogram"
+     },
+     {
+      "app": "C1",
+      "curve": "curve",
+      "en": "Heating curve",
+      "fi": "Lämmityskäyrä",
+      "sv": "Värmekurva"
+     },
+     {
+      "en": "Settings",
+      "fi": "Asetukset",
+      "items": [
+       {
+        "app": "C1",
+        "point": "C1_ENABLE",
+        "en": "Circuit in use",
+        "fi": "Piiri käytössä",
+        "sv": "Krets i drift"
+       },
+       {
+        "app": "C1",
+        "point": "C1_SP_OFFSET",
+        "en": "Setpoint offset",
+        "fi": "Asetusarvon siirto",
+        "sv": "Förskjutning"
+       },
+       {
+        "app": "C1",
+        "point": "C1_SETBACK",
+        "en": "Night setback",
+        "fi": "Menoveden pudotus",
+        "sv": "Sänkning framl."
+       },
+       {
+        "app": "C1",
+        "point": "C1_SUM_STOP",
+        "en": "Summer stop above",
+        "fi": "Kesäkatkaisu yli",
+        "sv": "Sommarstopp över"
+       },
+       {
+        "app": "C1",
+        "point": "C1_SUM_DLY",
+        "en": "Summer stop delay",
+        "fi": "Kesäkatkaisun viive",
+        "sv": "Sommarstopp fördröjn."
+       },
+       {
+        "app": "C1",
+        "point": "C1_SUM_START",
+        "en": "Heating on below",
+        "fi": "Lämmitys päälle alle",
+        "sv": "Värme på under"
+       },
+       {
+        "en": "Service",
+        "fi": "Huolto",
+        "items": [
+         {
+          "app": "C1",
+          "point": "C1_PID_P",
+          "en": "P-band",
+          "fi": "P-alue",
+          "sv": "P-band"
+         },
+         {
+          "app": "C1",
+          "point": "C1_PID_I",
+          "en": "I-time",
+          "fi": "I-aika",
+          "sv": "I-tid"
+         },
+         {
+          "app": "C1",
+          "point": "C1_VLV_FAULT",
+          "en": "Valve on fault",
+          "fi": "Venttiili vikatilassa",
+          "sv": "Ventil vid fel"
+         },
+         {
+          "app": "C1",
+          "point": "C1_EXER_ON",
+          "en": "Pump exercise run",
+          "fi": "Pumpun koeajo",
+          "sv": "Pumpmotion gångtid"
+         },
+         {
+          "app": "C1",
+          "point": "C1_EXER_OFF",
+          "en": "Exercise interval",
+          "fi": "Koeajon väli",
+          "sv": "Pumpmotion intervall"
+         },
+         {
+          "app": "C1",
+          "point": "C1_DEV_LIM",
+          "en": "Deviation limit",
+          "fi": "Poikkeamaraja",
+          "sv": "Avvikelsegräns"
+         },
+         {
+          "app": "C1",
+          "point": "C1_DEV_DLY",
+          "en": "Deviation delay",
+          "fi": "Poikkeaman viive",
+          "sv": "Avvikelsefördröjning"
+         }
+        ],
+        "sv": "Service"
+       }
+      ],
+      "sv": "Inställningar"
+     },
+     {
+      "en": "Status",
+      "fi": "Tilat",
+      "items": [
+       {
+        "app": "C1",
+        "point": "C1_TS_FAULT",
+        "en": "Sensor fault",
+        "fi": "Anturivika",
+        "sv": "Givarfel"
+       },
+       {
+        "app": "C1",
+        "point": "C1_DEV_ALM",
+        "en": "Deviation alarm",
+        "fi": "Poikkeamahälytys",
+        "sv": "Avvikelselarm"
+       },
+       {
+        "app": "C1",
+        "point": "C1_SV_ERR",
+        "en": "Set value conflict",
+        "fi": "Asetusarvoristiriita",
+        "sv": "Börvärdeskonflikt"
+       }
+      ],
+      "sv": "Status"
+     }
+    ],
+    "sv": "Värmekrets 1"
+   },
+   {
+    "en": "Heating circuit 2",
+    "fi": "Lämmityspiiri 2",
+    "items": [
+     {
+      "app": "C2",
+      "point": "C2_SP",
+      "en": "Supply setpoint",
+      "fi": "Menoveden asetusarvo",
+      "sv": "Börvärde framledning"
+     },
+     {
+      "app": "C2",
+      "point": "C2_TS_IN",
+      "en": "Supply temperature",
+      "fi": "Menoveden lämpötila",
+      "sv": "Framledningstemp."
+     },
+     {
+      "app": "C2",
+      "point": "C2_VALVE",
+      "en": "Valve position",
+      "fi": "Venttiilin asento",
+      "sv": "Ventilläge"
+     },
+     {
+      "app": "C2",
+      "point": "C2_PUMP",
+      "en": "Pump",
+      "fi": "Pumppu",
+      "sv": "Pump"
+     },
+     {
+      "app": "C2",
+      "point": "C2_SUMMER",
+      "en": "Summer stop",
+      "fi": "Kesäkatkaisu",
+      "sv": "Sommarstopp"
+     },
+     {
+      "app": "C2",
+      "point": "C2_TPRG",
+      "en": "Time program",
+      "fi": "Aikaohjelma",
+      "sv": "Tidsprogram"
+     },
+     {
+      "app": "C2",
+      "curve": "curve",
+      "en": "Heating curve",
+      "fi": "Lämmityskäyrä",
+      "sv": "Värmekurva"
+     },
+     {
+      "en": "Settings",
+      "fi": "Asetukset",
+      "items": [
+       {
+        "app": "C2",
+        "point": "C2_ENABLE",
+        "en": "Circuit in use",
+        "fi": "Piiri käytössä",
+        "sv": "Krets i drift"
+       },
+       {
+        "app": "C2",
+        "point": "C2_SP_OFFSET",
+        "en": "Setpoint offset",
+        "fi": "Asetusarvon siirto",
+        "sv": "Förskjutning"
+       },
+       {
+        "app": "C2",
+        "point": "C2_SETBACK",
+        "en": "Night setback",
+        "fi": "Menoveden pudotus",
+        "sv": "Sänkning framl."
+       },
+       {
+        "app": "C2",
+        "point": "C2_SUM_STOP",
+        "en": "Summer stop above",
+        "fi": "Kesäkatkaisu yli",
+        "sv": "Sommarstopp över"
+       },
+       {
+        "app": "C2",
+        "point": "C2_SUM_DLY",
+        "en": "Summer stop delay",
+        "fi": "Kesäkatkaisun viive",
+        "sv": "Sommarstopp fördröjn."
+       },
+       {
+        "app": "C2",
+        "point": "C2_SUM_START",
+        "en": "Heating on below",
+        "fi": "Lämmitys päälle alle",
+        "sv": "Värme på under"
+       },
+       {
+        "en": "Service",
+        "fi": "Huolto",
+        "items": [
+         {
+          "app": "C2",
+          "point": "C2_PID_P",
+          "en": "P-band",
+          "fi": "P-alue",
+          "sv": "P-band"
+         },
+         {
+          "app": "C2",
+          "point": "C2_PID_I",
+          "en": "I-time",
+          "fi": "I-aika",
+          "sv": "I-tid"
+         },
+         {
+          "app": "C2",
+          "point": "C2_VLV_FAULT",
+          "en": "Valve on fault",
+          "fi": "Venttiili vikatilassa",
+          "sv": "Ventil vid fel"
+         },
+         {
+          "app": "C2",
+          "point": "C2_EXER_ON",
+          "en": "Pump exercise run",
+          "fi": "Pumpun koeajo",
+          "sv": "Pumpmotion gångtid"
+         },
+         {
+          "app": "C2",
+          "point": "C2_EXER_OFF",
+          "en": "Exercise interval",
+          "fi": "Koeajon väli",
+          "sv": "Pumpmotion intervall"
+         },
+         {
+          "app": "C2",
+          "point": "C2_DEV_LIM",
+          "en": "Deviation limit",
+          "fi": "Poikkeamaraja",
+          "sv": "Avvikelsegräns"
+         },
+         {
+          "app": "C2",
+          "point": "C2_DEV_DLY",
+          "en": "Deviation delay",
+          "fi": "Poikkeaman viive",
+          "sv": "Avvikelsefördröjning"
+         }
+        ],
+        "sv": "Service"
+       }
+      ],
+      "sv": "Inställningar"
+     },
+     {
+      "en": "Status",
+      "fi": "Tilat",
+      "items": [
+       {
+        "app": "C2",
+        "point": "C2_TS_FAULT",
+        "en": "Sensor fault",
+        "fi": "Anturivika",
+        "sv": "Givarfel"
+       },
+       {
+        "app": "C2",
+        "point": "C2_DEV_ALM",
+        "en": "Deviation alarm",
+        "fi": "Poikkeamahälytys",
+        "sv": "Avvikelselarm"
+       },
+       {
+        "app": "C2",
+        "point": "C2_SV_ERR",
+        "en": "Set value conflict",
+        "fi": "Asetusarvoristiriita",
+        "sv": "Börvärdeskonflikt"
+       }
+      ],
+      "sv": "Status"
+     }
+    ],
+    "sv": "Värmekrets 2"
+   },
+   {
+    "en": "Common",
+    "fi": "Yhteiset",
+    "items": [
+     {
+      "app": "COMMON",
+      "point": "TOUT_IN",
+      "en": "Outdoor temperature",
+      "fi": "Ulkolämpötila",
+      "sv": "Utetemperatur"
+     },
+     {
+      "app": "COMMON",
+      "point": "TOUT_F",
+      "en": "Outdoor filtered",
+      "fi": "Ulkol. suodatettu",
+      "sv": "Utetemp. filtrerad"
+     },
+     {
+      "app": "COMMON",
+      "point": "TOUT_FAULT",
+      "en": "Outdoor sensor fault",
+      "fi": "Ulkoanturin vika",
+      "sv": "Utegivarfel"
+     },
+     {
+      "app": "ALARM",
+      "point": "ALARM_SUM",
+      "en": "Common alarm",
+      "fi": "Yhteishälytys",
+      "sv": "Summalarm"
+     },
+     {
+      "en": "Settings",
+      "fi": "Asetukset",
+      "items": [
+       {
+        "app": "COMMON",
+        "point": "TOUT_FALLBACK",
+        "en": "Outdoor fallback",
+        "fi": "Ulkol. vara-arvo",
+        "sv": "Utetemp. reservvärde"
+       },
+       {
+        "app": "COMMON",
+        "point": "TOUT_FILT_T",
+        "en": "Filter time",
+        "fi": "Suodatusaika",
+        "sv": "Filtertid"
+       }
+      ],
+      "sv": "Inställningar"
+     }
+    ],
+    "sv": "Gemensamt"
+   }
+  ]
+ },
+ "languages": [
+  "en",
+  "fi",
+  "sv"
+ ],
+ "webui": {
+  "_note": "Web UI pages (BA Tool Web UI configuration charts). Page files are written by make_webui.py; a Text holds one string, so texts are picked in 'language'. Links: physical point names, <application>.<point>.",
+  "language": "fi",
+  "pages": [
+   {
+    "name": {
+     "en": "Heating",
+     "fi": "Lämmitys",
+     "sv": "Värme"
+    },
+    "file": "webui/heating.json"
+   }
+  ]
+ },
+ "trends": {
+  "_note": "trend logs (one per point, interval s / length samples; the device has 200, the physical points have theirs by default) and the groups the web UI's trend view shows (at most 30 points, one y axis per entry). Names: webui.language.",
+  "interval": 60,
+  "length": 10000,
+  "groups": [
+   {
+    "name": {
+     "en": "Heating circuit 1",
+     "fi": "Lämmityspiiri 1",
+     "sv": "Värmekrets 1"
+    },
+    "axes": [
+     {
+      "name": "°C",
+      "points": [
+       "COMMON.TOUT_F",
+       "C1.C1_SP",
+       "UI 4"
+      ]
+     },
+     {
+      "name": "%",
+      "points": [
+       "C1.C1_VALVE"
+      ]
+     },
+     {
+      "name": {
+       "en": "on/off",
+       "fi": "päällä/pois",
+       "sv": "till/från"
+      },
+      "points": [
+       "C1.C1_PUMP",
+       "C1.C1_SUMMER"
+      ]
+     }
+    ]
+   },
+   {
+    "name": {
+     "en": "Heating circuit 2",
+     "fi": "Lämmityspiiri 2",
+     "sv": "Värmekrets 2"
+    },
+    "axes": [
+     {
+      "name": "°C",
+      "points": [
+       "COMMON.TOUT_F",
+       "C2.C2_SP",
+       "UI 5"
+      ]
+     },
+     {
+      "name": "%",
+      "points": [
+       "C2.C2_VALVE"
+      ]
+     },
+     {
+      "name": {
+       "en": "on/off",
+       "fi": "päällä/pois",
+       "sv": "till/från"
+      },
+      "points": [
+       "C2.C2_PUMP",
+       "C2.C2_SUMMER"
+      ]
+     }
+    ]
+   },
+   {
+    "name": {
+     "en": "District heating",
+     "fi": "Kaukolämpö",
+     "sv": "Fjärrvärme"
+    },
+    "axes": [
+     {
+      "name": "°C",
+      "points": [
+       "UI 2",
+       "UI 3",
+       "UI 1",
+       "COMMON.TOUT_F"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

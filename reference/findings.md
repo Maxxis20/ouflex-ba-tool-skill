@@ -424,7 +424,7 @@ trace-log viewer (`TraceDebug`).
 - Proven on dh2 `C1`: curve −20/0/+20 → 58/41/20, 12.5 °C → 27.875; summer stop after `C1_SUM_DLY`, pump and
   valve to 0; PID valve 100 % at supply 0 / setpoint 41.
 - **Scenario runner**: `pipeline/sim_test.py <app.ouear (Windows path)> <scenario.json> [--factor] [--attach]`, scenario
-  format (set / wait / expect / until / note), Reset+Run per case. Example `pipeline/examples/dh2/sim-C1.json`.
+  format (set / wait / expect / until / note), Reset+Run per case. Example `examples/dh2/sim-C1.json`.
 - **Reset is asynchronous**: the state reads RUNNING for a moment, then HALTED. `Sim-Reset` waits for
   HALTED, `Sim-Run` presses Run only when not RUNNING and waits for RUNNING. Without that a scenario ran on a
   halted program and "passed" on stale values. Reset restores written set values to their defaults.
@@ -438,7 +438,7 @@ trace-log viewer (`TraceDebug`).
   `Sim-Factor` now sets another value first.
 - **Short pulses fall between polls**: at factor 100 one ~3 s read is ~5 min simulated, so a 120 s exercise pulse
   can pass unseen; the scenario uses a 900 s pulse.
-- dh2 C1 scenario `pipeline/examples/dh2/sim-C1.json`: 9 cases (curve/offset/limits, summer stop with latch, sensor
+- dh2 C1 scenario `examples/dh2/sim-C1.json`: 9 cases (curve/offset/limits, summer stop with latch, sensor
   fault, disable, deviation alarm, pump exercise, clamp, night setback, comfort), RESULT OK in ~8 min wall clock
   (2026-11-24, log `build/out/sim-C1.txt`).
 - Not yet: device level (several applications, physical I/O, Modbus), the Virtual Ouflex A, the virtual panel

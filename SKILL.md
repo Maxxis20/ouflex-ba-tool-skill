@@ -86,6 +86,7 @@ rule, I/O kinds, required fills, output folder) + `plan.json` + a generator that
 builds it from nothing and verifies it:
 
     scripts/build.sh examples/dh-ex2                      # district heating + hot water (worked example, a few minutes)
+    scripts/build.sh examples/dh2                         # two heating circuits, time programs (night setback)
     STAGES="gen apps" APPS=ALARM scripts/build.sh <dir>   # single stages, single applications
     STAGES=deliver scripts/build.sh <dir>                 # copy the built project to paths.deliver, open, check
 
