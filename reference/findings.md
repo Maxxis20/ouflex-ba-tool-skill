@@ -623,7 +623,7 @@ A time program (schedule) is no block: it is an object the tool attaches to a bl
   every stage OK (apps incl. programs, device, Modbus, HMI 62 entries, Web UI links 362/363 `Timeprogram`, saved-file
   check). Simulator cases "3.8" (setback 41 → 31 °C, offset before, stop at TS_MIN; comfort no setback) pass.
 
-## Ouflex M_BA (MB-A): device type, Modbus RTU slave, SD card files (seen 2026-11-24, tool only, no device)
+## Ouflex M_BA (MB-A): device type, Modbus RTU slave, SD card files (tool 2026-11-24, on a device 2026-11-25)
 
 - **Device type** in New project: **"Ouflex M_BA (Template/Ouflex M_BA.dev)"** (the list also offers M-Link, Ouflex A XL,
   Ouflex A, Ouflex AX). The start page names its software "Ouflex M BA 2.13.7"; firmware in `Template\Ouflex MBA bin`
@@ -636,7 +636,11 @@ A time program (schedule) is no block: it is an object the tool attaches to a bl
     by default, `m_Parity` None/Even/Odd, `m_FlowControl` None/XonXoff.
   - `Modbus RTU master 1 (COM4 (A2/B2))` (MB1), `Modbus RTU master 2` (MB2, not in use), `Modbus TCP master`.
   - Set by code: `$slave.Address=2`, `SF $port 'm_BaudRate' ([uint32]19200)`, then `Save-Project`. Read back after
-    reopen: address 2, 19200 8N1, COM2 A1;B1 (proven in the tool; behaviour on a device not tested).
+    reopen: address 2, 19200 8N1, COM2 A1;B1.
+  - **On a device (proven 2026-11-25, an AXC F 2152 as master)**: A1 = RS-485 D+, B1 = D−. The slave answers FC 03 (blocks
+    of 7 and 3 registers, a block may start at any mapped register) and **FC 16 with quantity 1** (55+ writes, no
+    exception). Stable at about one request per second: 88 good replies, 1 error in 2 min. A master's reply timeout
+    of 1 s was enough when the MB-A answered at all; FC 06 not tried.
 - **Card export by code, no mouse** (proven 2026-11-25, helpers `Start-CardExport`, `Card-Folder`, `Card-Done` in
   `win/prelude.ps1`): the Browse For Folder dialog is a `#32770` window of the tool's own process. An `hrun` posted after
   `Start-CardExport` runs inside the dialog's message loop, so `SendMessage(dlg, BFFM_SETSELECTIONW 0x467, TRUE, path)`

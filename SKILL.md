@@ -148,11 +148,12 @@ Programming a device (proven on an MB-A):
    card formatted FAT32 elsewhere worked. exFAT is untested.
 4. **Device**: power off, insert the card, power on. The MB-A loads the project; the display menu shows the program's
    folder. Check the slave settings on the display (System settings).
-5. **Wiring**: RS-485 two-wire on A1/B1, daisy chain, 120 Ω only at the two bus ends. The tool does not say which of
-   A1/B1 is D+: swap them if the master gets no answer.
+5. **Wiring**: RS-485 two-wire, A1 = D+, B1 = D− (proven; the tool names only A1/B1), daisy chain, 120 Ω only at the
+   two bus ends.
 
-Not in the tool, so unproven: which function codes the slave accepts (FC 03 and FC 16 are the safe assumption; let
-the master fall back to FC 06), and which code the MB-A's own RTU master writes with. Details: findings, "Ouflex M_BA".
+Proven on a device with a PLC as master: the slave answers FC 03 and FC 16 with one register, about one request per
+second without trouble (FC 06 not tried). Unproven: which function code the MB-A's own RTU master writes with.
+Details: findings, "Ouflex M_BA".
 
 ## More helpers (`win/prelude.ps1`)
 
