@@ -125,6 +125,35 @@ tool drops it from the object list at the next sync, so it is not saved.
 - By hand: `TPRG $cv 'blk.pin' NAME default @(7 days) display @(off, on)`.
 Details, including the Modbus registers the tool gives each program: findings, "Time programs".
 
+## Ouflex M_BA (MB-A): Modbus RTU slave, programmed from a MicroSD card
+
+Device type "Ouflex M_BA" in New project (`New-Project-Step <name> <dir> 'Ouflex M_BA'`). I/O UI 1..15, InternalSensor,
+Y1..Y4, R1..R6. A Modbus RTU **slave** on COM2, terminals A1/B1 (default address 1, 9600 8N1), besides RTU master 1 on
+COM4 (A2/B2), master 2 and a TCP master.
+- **Slave port in a build**: `program.json` `"rtu_slave": {"address": 2, "baud": 19200, "parity": "None", "stop": 1}`.
+  The device stage sets it (`RTUS`) and checks it after reopen.
+- **Fixed registers**: `setv(..., reg=1001)` and `measure(..., reg=1102)` in a plan. Every point is a holding register;
+  an S16 carries value × 10^decimals. Set values are writable, measurements read-only.
+- **Stored values**: the device stores the present value of every set value, so a master should write commands on
+  change, not cyclically (no heartbeat into a set value).
+
+Programming a device (proven on an MB-A):
+1. Build and check the program as usual (`scripts/build.sh <program dir>`, then the simulator).
+2. **Card files**, three `hrun` calls on a `pm` instance with the project open, no mouse:
+   `Start-CardExport` (Device > "Load applications to zip file"; the tool opens a Browse For Folder dialog),
+   `Card-Folder 'C:\work\card'` (selects that empty folder in the dialog and presses OK; the tool writes the files),
+   `Card-Done 'C:\work\card'` (closes "Data loaded successfully" and lists the files). An MB-A project gives 23 files:
+   firmware, `config.cfg`, `mbs_tcp.mbs` (the slave register map), menus, texts and `tooldata.7z` (the project).
+3. **Card**: FAT32, one partition, the files in the **root**. Windows' own format offers FAT32 only up to 32 GB; a 64 GB
+   card formatted FAT32 elsewhere worked. exFAT is untested.
+4. **Device**: power off, insert the card, power on. The MB-A loads the project; the display menu shows the program's
+   folder. Check the slave settings on the display (System settings).
+5. **Wiring**: RS-485 two-wire on A1/B1, daisy chain, 120 Ω only at the two bus ends. The tool does not say which of
+   A1/B1 is D+: swap them if the master gets no answer.
+
+Not in the tool, so unproven: which function codes the slave accepts (FC 03 and FC 16 are the safe assumption; let
+the master fall back to FC 06), and which code the MB-A's own RTU master writes with. Details: findings, "Ouflex M_BA".
+
 ## More helpers (`win/prelude.ps1`)
 
 - **Simulator**, no controller needed: `hstart.sh dbg ApplicationDebugger.exe '<app.ouear>' lang=en-GB`, then

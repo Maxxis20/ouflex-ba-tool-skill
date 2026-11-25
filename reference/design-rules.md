@@ -22,6 +22,8 @@ These are about *what* to build. How to build it is in `findings.md`.
 - Unused inputs of extendable blocks (And, Or, Add, Min, Max …) are left untouched; they are
   excluded from the calculation. A typed constant or a set value makes the pin Active, i.e.
   connected. A non-extendable input left empty fails the tool's check.
+- Where the vendor text says "if X is not connected, ... is not in use", leave X untouched: a constant connects it.
+  `CountUp.Max` = 0 capped a heartbeat counter at 0.
 - Arithmetic with a constant: prefer a block whose constant sits on a normal parameter pin
   (e.g. `Compensator`) over a constant on an extendable input.
 

@@ -436,6 +436,13 @@ trace-log viewer (`TraceDebug`).
 - **Factor after a reload**: a (re)load starts the virtual device at factor 1, and the combo passes the speed on only
   when its text changes, so setting "100" again did nothing (all delay cases failed after a `Sim-Week` reload).
   `Sim-Factor` now sets another value first.
+- **Reset keeps block states** (2026-11-24, a process simulator): Reset restores set values to their defaults, but internal states
+  stay (an `Integrator` still held −50 from the previous case, so a level started at 0 instead of 50 %). A scenario
+  with integrators, ramps or counters needs `"reload_each_case": true` (`sim_test.py` loads the application again).
+- **A block's own output wired to its own input reads 0** in the simulator (a `SwitchAn` hold showed `Input1=0` while
+  its output was 100). A hold needs two blocks: the switch, and a pass-through `SwitchAn` (Select 0) declared after it
+  whose output feeds the switch (one cycle old). Feedback from a later block works.
+- **Writes are checked**: `sim_test.py` reads every written point back and writes again what did not arrive.
 - **Short pulses fall between polls**: at factor 100 one ~3 s read is ~5 min simulated, so a 120 s exercise pulse
   can pass unseen; the scenario uses a 900 s pulse.
 - dh2 C1 scenario `examples/dh2/sim-C1.json`: 9 cases (curve/offset/limits, summer stop with latch, sensor
@@ -615,6 +622,69 @@ A time program (schedule) is no block: it is an object the tool attaches to a bl
 - **dh2** (2026-11-24): `C1_TPRG`/`C2_TPRG` on `nsb.Select`, setback set values `Cn_SETBACK`. Built from nothing with
   every stage OK (apps incl. programs, device, Modbus, HMI 62 entries, Web UI links 362/363 `Timeprogram`, saved-file
   check). Simulator cases "3.8" (setback 41 → 31 °C, offset before, stop at TS_MIN; comfort no setback) pass.
+
+## Ouflex M_BA (MB-A): device type, Modbus RTU slave, SD card files (seen 2026-11-24, tool only, no device)
+
+- **Device type** in New project: **"Ouflex M_BA (Template/Ouflex M_BA.dev)"** (the list also offers M-Link, Ouflex A XL,
+  Ouflex A, Ouflex AX). The start page names its software "Ouflex M BA 2.13.7"; firmware in `Template\Ouflex MBA bin`
+  (`app_A_BA.bin`, `app_B_BA.bin`, `ncp473D.lin`, `start.bmp`). Made by code with the public helper `New-Project-Step
+  <name> <dir> 'Ouflex M_BA'` (`prelude_public.ps1`; the same four dialogs as for an Ouflex A).
+- **Device page I/O**: UI 1..15, InternalSensor, analog outputs Y1..Y4, relays R1..R6, Sounder.
+- **Bus ports** (Devices page, `treeView` nodes):
+  - `Modbus RTU slave (COM2 (A1/B1))`, a `CModbusRTUSlaveConfig`: `Enabled` True, `Address` 1, `DelayBetweenPackets`
+    100, `m_ReplyTimeout` 1000. Its `m_RefSerPort` (`CBacnetSerialPortConfig`): COM2, connectors A1;B1, **9600 8N1**
+    by default, `m_Parity` None/Even/Odd, `m_FlowControl` None/XonXoff.
+  - `Modbus RTU master 1 (COM4 (A2/B2))` (MB1), `Modbus RTU master 2` (MB2, not in use), `Modbus TCP master`.
+  - Set by code: `$slave.Address=2`, `SF $port 'm_BaudRate' ([uint32]19200)`, then `Save-Project`. Read back after
+    reopen: address 2, 19200 8N1, COM2 A1;B1 (proven in the tool; behaviour on a device not tested).
+- **Card export by code, no mouse** (proven 2026-11-25, helpers `Start-CardExport`, `Card-Folder`, `Card-Done` in
+  `win/prelude.ps1`): the Browse For Folder dialog is a `#32770` window of the tool's own process. An `hrun` posted after
+  `Start-CardExport` runs inside the dialog's message loop, so `SendMessage(dlg, BFFM_SETSELECTIONW 0x467, TRUE, path)`
+  selects any existing folder (the path string is valid because it is the same process) and `BM_CLICK` on control 1
+  presses OK. The files go straight into that folder. "Data loaded successfully" is a message box whose OK is control
+  **2**. Dialogs are found by class among the process's windows, not by title (Windows translates the folder dialog's
+  title). Traps met on the way: `FindWindow($null, ...)` from PowerShell never matches, because PowerShell passes `$null`
+  to a string parameter as ""; the dialog is often not foreground (`gui.sh fg` prints an empty title); and the firmware
+  files keep their original timestamps, so collecting an export from the Desktop by modification time misses 11 of 23.
+- **Third-party Modbus slave on a master port** (seen 2026-11-25 in the templates and types, nothing built): the generic
+  device template is `Template\Devices\NewDevice.sdev` (typeName `CommonModbusDevice`) + `NewDevice.xml` (points:
+  `addressindex`, `addressformat`, `scaling`, `type`, `modbusfunction`, `Enum`). Per point `CModbusData`:
+  `ModbusFunction` (`EModbusFunctions` CoilStatus=1, InputStatus=2, HoldingRegister=3, InputRegister=4: the area read),
+  `DataType` (U16, S16, U32, S32, Float, ...), `Swap` (NoSwap, SwapWord, SwapByte, SwapByteAndWord), `NumberOfRegisters`,
+  `Scaling`, `Signed`, `WriteOnly`, `ReadAsMultiple`, `PollingInterval`. Which function code the master uses to write
+  (05/06/15/16) is not a field: firmware's choice, unknown. Which word order `NoSwap` means is unproven (likely high
+  word first). Bus points reach an application with canvas `AddBusPoint` (proven for FLEX UI8).
+- **Which written values are stored** (from the code that writes the device object file,
+  `OuFlexDevice.COuman6000Converter.createObjectFileLine` / `isSavingProperty`, per property flags):
+  - flag 1 "saving" for: the **present value of every set value** (object category Setvalue), the present value of
+    application points with IoType SetPoint (4), constants, measurements only when `StoreObjectToFile` is set, time
+    programs, and the property list `m_SavingProperties` (MANUAL_CONTROL, MANUALCONTROL_VALUE, weekly/exception
+    schedules, special days, description, language, lock code, ...);
+  - flag 128 "save immediately" only for a set value whose `SaveAlwaaysImmediatelyAfterChanges` (sic) is True; the
+    default is False, so the device stores written set values deferred. When and where (internal flash or the SD
+    card) the device stores them is not in the tool;
+  - so a value a Modbus master writes often (a heartbeat) into a set value is a stored value. Measurements are
+    read-only on the slave, and a manual-control write is stored too.
+- **SD card files**: Device > "Load applications to zip file" (`DeviceConnectionTool.loadDataToDeviceToolStripMenuItem_Click`
+  → `loadAllToDevice`) asks first "keep the device's set values?" (not seen for a new project), builds
+  `<project>\Devices\Device1\Temp\SD`, opens a native **Browse For Folder** dialog (no file box; selected by message, see "Card export by code")
+  and writes the files **unpacked** into the chosen folder ("Device data is loaded to the folder ..."). For an
+  empty MB-A project, 23 files: `app_A_BA.bin`, `app_B_BA.bin`, `ExtHMIFirm*.bin`, `IO-CardsSW.bin`, `OuflexIO.bin`,
+  `ncp473D.lin`, `start.bmp`, fonts (`smallfont*.ehf`), `config.cfg`, `mbs_tcp.mbs`, `Menus.mns`, `menuIndexes.mnu`,
+  `smsmenu_0.smnu`, `Texts_1.txt`, `Units_1.txt`, `HIERARGY.ZIP`, `POINTINFO.ZIP`, `descrFiles.zip`,
+  `application_id.txt`, `tooldata.7z` (the project). Pick an empty folder: with Desktop selected the files land loose
+  on the desktop. **On a device (proven 2026-11-25)**: the 23 files in the root of a FAT32 card (one MBR partition; a
+  64 GB card formatted FAT32 worked), inserted with power off: at power-up the MB-A
+  loaded the project and its display menu showed the application's HMI folder.
+- **Modbus scaling of application points** (proven from the card file `mbs_tcp.mbs`, columns `<object id><datareg>
+  <regbitmask><numberofreg><datatype><signed><propertyid><scaling><rw>`): an S16 register carries the value × 10^decimals
+  of the point (PT1 with 2 decimals → scaling 100, 1 decimal → 10, binary → 1), signed for analog points. The html
+  Modbus document leaves this out for application points.
+- **Explicit registers**: `setv(..., reg=1001)` / `measure(..., reg=1102)` in a plan override the base + area + offset
+  rule (`oufplan.py`, `make_ouflex_build.py`); RTU slave settings come from `program.json` `"rtu_slave"` (helper `RTUS`,
+  checked as `RTUS|...` in the device dump).
+- Device > Create > "Modbus slave template" makes an Ouflex `.dev` template of this device for **another Ouflex as
+  master** (Template\Devices), not a list for a third-party master.
 
 ## Languages, Modbus export without a dialog, GUI keystrokes (proven 2026-11-24)
 

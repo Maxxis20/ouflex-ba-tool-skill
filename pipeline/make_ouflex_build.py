@@ -467,6 +467,10 @@ class Gen:
             if i["dir"] == "out":
                 lines.append(f"IOA $cv {ps(obj)}")       # a point left in manual ignores the program (TR n are in manual in a new project)
         lines.append("Build-Summary 'dev_io'")
+        rs = cfg.get("rtu_slave")                 # Modbus RTU slave port (Ouflex M_BA COM2): address, baud, parity, stop bits
+        if rs:
+            lines.insert(len(lines) - 1 if lines and lines[-1].startswith("Build-Summary") else len(lines),
+                         f"RTUS $cv {int(rs['address'])} {int(rs.get('baud', 9600))} {ps(rs.get('parity', 'None'))} {int(rs.get('stop', 1))}")
         write_bom(os.path.join(OUT, "dev_2_io.ps1"), "\n".join(lines) + "\n")
         order = [a["name"] for a in sorted(self.apps, key=lambda a: a["order"])]
         lines = ["# device level 2/3: import the applications in execution order", "$cv=TopCanvas; if(-not $cv){ 'FAIL no device canvas'; return }",
@@ -513,6 +517,10 @@ class Gen:
             "global_readers": greaders,          # reader application -> {global name: application that defines it}
             "auto_outputs": [obj for p, obj, i, k in pts if i["dir"] == "out"],
         }
+        if cfg.get("rtu_slave"):
+            rs = cfg["rtu_slave"]
+            expected["device"]["rtu_slave"] = {"address": int(rs["address"]), "baud": int(rs.get("baud", 9600)), "parity": rs.get("parity", "None"),
+                                               "stop": int(rs.get("stop", 1))}
         # ---- Modbus ----
         mbc = cfg["modbus"]
         fmts = mbc["formats"]
@@ -522,7 +530,7 @@ class Gen:
             app = s["pins"][0].split("/")[0]
             m = s.get("modbus")
             if m:
-                reg = mbc["base"] + mbc["areas"][m["table"]] + m["offset"]
+                reg = m["register"] if m.get("register") is not None else mbc["base"] + mbc["areas"][m["table"]] + m["offset"]
                 fmt = "U16" if s["type"] == "Enum" else fmts.get(m.get("format") or "default", fmts["default"])
                 lines.append(f"MBR $cv {ps(app)} {ps(s['name'])} {reg} {ps(fmt)} $true")
                 mb.append({"name": s["name"], "kind": "setvalue", "spec_table": m["table"], "spec_offset": m["offset"], "spec_address": m.get("address"),
@@ -536,7 +544,7 @@ class Gen:
                 mb.append({"name": g, "kind": "net", "spec_table": None, "register": None, "using": False})
         for m in P["measures"]:
             mm = m["modbus"]
-            reg = mbc["base"] + mbc["areas"][mm["table"]] + mm["offset"]
+            reg = mm["register"] if mm.get("register") is not None else mbc["base"] + mbc["areas"][mm["table"]] + mm["offset"]
             boolean = mm["table"] in ("1x", "0x")
             fmt = "U16" if boolean else fmts.get(mm.get("format") or "default", fmts["default"])
             if m["source"].startswith("io:"):

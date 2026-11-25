@@ -11,8 +11,10 @@ pins, set values and measurements (names as in the plan), not device I/O.
 
 Scenario format: {"name", "factor"?, "cases": [{"name", "steps": [...]}]}
 with steps {"set": {pt: v}}, {"wait": "40s"|"4m"|"1h"}, {"expect": {pt: v}, "tol"?: x},
-{"until": {pt: v}, "max": "60s"}, {"note": "..."}, {"week": {TPRG: "on"|"off"|[7 day strings]}}. true/false = 1/0.
-Each case starts with Reset + Run. A time program follows the Windows clock and is evaluated only when the program starts, so
+{"until": {pt: v}, "max": "60s"}, {"note": "..."}, {"week": {TPRG: "on"|"off"|[7 day strings]}},
+{"changes": [pt, ...], "within": "10s"}. true/false = 1/0.
+Each case starts with Reset + Run (Reset restores set values, not block states such as integrators: give the scenario
+"reload_each_case": true to load the application again before every case). A time program follows the Windows clock and is evaluated only when the program starts, so
 "week" (first step of a case) rewrites the program's week in the loaded application ("on" = 1 all week, "off" = 0),
 loads it again and restarts.
 Time runs `factor` times faster than the wall clock (combo "Timer factor", any number, 100 proven); the
@@ -78,7 +80,16 @@ class Sim:
         return vals
 
     def set(self, values):
-        self.ps("\n".join(f"Sim-Set {ps_lit(n)} {ps_lit(v)}" for n, v in values.items()))
+        """write, read back, write again what did not arrive (a write was seen to get lost); returns what still differs"""
+        for attempt in range(3):
+            self.ps("\n".join(f"Sim-Set {ps_lit(n)} {ps_lit(v)}" for n, v in values.items()))
+            got = self.get(list(values))
+            bad = {n: got[n] for n, v in values.items() if not match(got[n], v, 1e-6)}
+            if not bad:
+                return {}
+            values = {n: values[n] for n in bad}
+            sys.stderr.write(f"   (write not taken: {bad}, retry)\n")
+        return bad
 
 
 def match(got, want, tol):
@@ -113,8 +124,20 @@ def main():
     fails = 0
     for case in sc["cases"]:
         print(f"== {case['name']}")
+        if sc.get("reload_each_case"):           # Reset restores set values but not block states (integrators, ramps)
+            for attempt in range(4):              # the old virtual device can still hold eventlog.bin for a moment
+                try:
+                    out = sim.ps("Sim-Load")
+                except RuntimeError as e:
+                    out = str(e)
+                if "Loading complete" in out:
+                    break
+                time.sleep(4)
+            else:
+                raise RuntimeError(f"reload failed: {out.strip()[-300:]}")
+            sim.ps(f"Sim-Factor {ps_lit(factor)}")
         sim.ps("Sim-Reset | out-null; Sim-Run")
-        time.sleep(1)
+        time.sleep(3)              # a write right after Run was sometimes lost (seen 2026-11-24): let the device settle
         t_mark = time.time()  # wall clock of the last set: waits count from here
         ok = True
         for st in case["steps"]:
@@ -131,9 +154,10 @@ def main():
             if "note" in st:
                 print(f"   # {st['note']}")
             if "set" in st:
-                sim.set(st["set"])
+                lost = sim.set(st["set"])
                 t_mark = time.time()
-                print(f"   set {st['set']}")
+                print(f"   set {st['set']}" + (f"  FAIL write not taken: {lost}" if lost else ""))
+                ok &= not lost
             if "wait" in st:
                 due = t_mark + secs(st["wait"]) / factor
                 time.sleep(max(0, due - time.time()))
@@ -144,6 +168,14 @@ def main():
                 bad = {n: (got[n], w) for n, w in st["expect"].items() if not match(got[n], w, tol)}
                 print(f"   {'ok  ' if not bad else 'FAIL'} expect {st['expect']}" + (f"  got {got}" if bad else ""))
                 ok &= not bad
+            if "changes" in st:                       # {"changes": [pts], "within": "10s"}: each point must take another value
+                names = list(st["changes"]); before = sim.get(names)
+                time.sleep(secs(st.get("within", "10s")) / factor)
+                after = sim.get(names)
+                same = [n for n in names if after[n] == before[n]]
+                print(f"   {'ok  ' if not same else 'FAIL'} changes {names}" + (f"  unchanged {same} = {[after[n] for n in same]}" if same else ""))
+                ok &= not same
+                t_mark = time.time()
             if "until" in st:
                 limit = time.time() + secs(st.get("max", "60s")) / factor + 4
                 while True:

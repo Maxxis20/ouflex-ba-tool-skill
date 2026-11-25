@@ -233,6 +233,15 @@ def verify_device(path):
     ours = sorted([f for f in apps if f[1] in e["apps"]], key=lambda f: int(f[2]))
     if [f[1] for f in ours] != e["apps"]: diffs.append(f"applications in execution order {[f[1] for f in ours]}, expected {e['apps']}")
     notes.append("device applications: " + ", ".join(f"{f[1]}#{f[2]}" for f in apps))
+    if e.get("rtu_slave"):
+        w = e["rtu_slave"]; g = (by.get("RTUS") or [None])[0]
+        if not g: diffs.append("Modbus RTU slave port not in the dump")
+        else:
+            got = {"enabled": g[1], "address": int(g[2]), "baud": int(g[3]), "parity": g[5], "stop": int(float(g[6]))}
+            for k in ("address", "baud", "parity", "stop"):
+                if got[k] != w[k]: diffs.append(f"RTU slave {k} {got[k]}, expected {w[k]}")
+            if got["enabled"] != "True": diffs.append("RTU slave port not enabled")
+            notes.append(f"RTU slave: address {got['address']}, {got['baud']} {g[4]}{got['parity'][0]}{got['stop']}, {g[7]} {g[8]}")
     dw = {}
     for f in by.get("DW", []):
         if f[2]:

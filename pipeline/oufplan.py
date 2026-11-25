@@ -65,10 +65,11 @@ def io(point):
     return {"io": point}
 
 
-def setv(name, default=None, min=None, max=None, unit="", display="", decimals=None, why="", local=False):
+def setv(name, default=None, min=None, max=None, unit="", display="", decimals=None, why="", local=False, reg=None):
+    """reg = explicit Modbus register (protocol address) instead of the program's base + area + offset rule"""
     d = {"setvalue": name}
     if default is not None:
-        d["_def"] = {"default": default, "min": min, "max": max, "unit": unit, "display": display, "decimals": decimals, "why": why, "local": local}
+        d["_def"] = {"default": default, "min": min, "max": max, "unit": unit, "display": display, "decimals": decimals, "why": why, "local": local, "reg": reg}
     return d
 
 
@@ -89,8 +90,8 @@ def tprg(name, default, week, display="", states=None, why="", kind="On_Off"):
     return {"tprg": name, "_def": {"default": default, "week": list(week), "display": display, "states": states, "why": why, "type": kind}}
 
 
-def measure(name, unit="", decimals=None, display="", why=""):
-    return {"measure": name, "_def": {"unit": unit, "decimals": decimals, "display": display, "why": why}}
+def measure(name, unit="", decimals=None, display="", why="", reg=None):
+    return {"measure": name, "_def": {"unit": unit, "decimals": decimals, "display": display, "why": why, "reg": reg}}
 
 
 class Block:
@@ -203,6 +204,8 @@ class Plan:
                                 sv["modbus"] = None
                             else:
                                 sv["modbus"] = {"table": "4x", "offset": sv_off, "writable": True}
+                                if dd.get("reg") is not None:
+                                    sv["modbus"]["register"] = dd["reg"]
                                 sv_off += 1
                             setvalues[n] = sv
                         elif n not in setvalues:
@@ -232,6 +235,8 @@ class Plan:
                                 raise ValueError(f"measure {n} twice")
                             binary = ptype == "Enum"
                             mb = {"table": "1x" if binary else "3x", "offset": m1 if binary else m3, "writable": False}
+                            if dd.get("reg") is not None:
+                                mb["register"] = dd["reg"]
                             if binary:
                                 m1 += 1
                             else:

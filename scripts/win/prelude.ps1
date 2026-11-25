@@ -131,6 +131,39 @@ function Start-ModbusExport(){ Start-MenuItem 'modbusInterfaceToolStripMenuItem'
 function Export-ModbusHtml([string]$path){ $t=(MenuClickHandler 'modbusInterfaceToolStripMenuItem').Target; $dev=GF $t 'm_CurrentDevice'; if(-not $dev){ throw 'no current device' }
   $conv=@($dev.OnlineConnection.DeviceDataConverters) | ? { $_.GetType().Name -eq 'CDescriptionFileCreator' } | select -First 1; if(-not $conv){ throw 'no CDescriptionFileCreator' }
   $conv.OuFlexDevice=$dev; [void]$conv.createModbusInterfaceHtml($path,$true); if(-not (Test-Path $path)){ throw "Modbus document $path not written" }; "wrote $path $((Get-Item $path).Length)" }
+# ---- SD card files (Device > "Load applications to zip file"), no mouse and no typing. Three hrun calls:
+#   Start-CardExport            posts the menu item; the tool then opens a native Browse For Folder dialog
+#   Card-Folder 'C:\x\card'     (runs inside that dialog's message loop) selects the folder with BFFM_SETSELECTION, presses OK;
+#                               the tool writes the files unpacked into it and shows "Data loaded successfully"
+#   Card-Done 'C:\x\card'       presses that message's button and lists the files
+# Dialogs are found by class #32770 among this process's own windows, so a translated title does not matter.
+function Init-CardNative(){ if(-not ('CardN' -as [type])){ Add-Type -TypeDefinition @'
+using System;using System.Text;using System.Collections.Generic;using System.Runtime.InteropServices;
+public static class CardN{
+ public delegate bool EP(IntPtr h,IntPtr l);
+ [DllImport("user32.dll")] static extern bool EnumWindows(EP f,IntPtr l);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h,StringBuilder s,int n);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr h,StringBuilder s,int n);
+ [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h,out uint p);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] public static extern IntPtr SendMessage(IntPtr h,uint m,IntPtr w,string l);
+ [DllImport("user32.dll")] public static extern IntPtr GetDlgItem(IntPtr h,int id);
+ [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h,uint m,IntPtr w,IntPtr l);
+ public static List<IntPtr> Dialogs(uint pid){ var r=new List<IntPtr>(); EnumWindows((h,l)=>{ uint p; GetWindowThreadProcessId(h,out p);
+   if(p==pid && IsWindowVisible(h)){ var c=new StringBuilder(64); GetClassName(h,c,64); if(c.ToString()=="#32770") r.Add(h); } return true; },IntPtr.Zero); return r; }
+ public static string Title(IntPtr h){ var s=new StringBuilder(256); GetWindowText(h,s,256); return s.ToString(); }
+}
+'@ } }
+function Card-Dialog(){ Init-CardNative; $d=@([CardN]::Dialogs([uint32]$PID)); if($d.Count -ne 1){ throw "expected one open dialog, found $($d.Count): $(($d | % { [CardN]::Title($_) }) -join ' | ')" }; $d[0] }
+function Start-CardExport(){ Start-MenuItem 'loadApplicationsToDeviceToolStripMenuItem' }
+function Card-Folder([string]$dir){ $h=Card-Dialog; $t=[CardN]::Title($h)
+  if(Test-Path $dir){ if(@(Get-ChildItem $dir -Force).Count){ throw "card folder $dir is not empty" } } else { New-Item -ItemType Directory -Force $dir | Out-Null }
+  if([CardN]::GetDlgItem($h,1) -eq [IntPtr]::Zero){ throw "dialog '$t' has no OK button" }
+  [void][CardN]::SendMessage($h,0x467,[IntPtr]1,$dir)          # BFFM_SETSELECTIONW, wParam TRUE = lParam is a path
+  [void][CardN]::PostMessage([CardN]::GetDlgItem($h,1),0x00F5,[IntPtr]::Zero,[IntPtr]::Zero); "selected $dir in '$t', OK pressed" }
+function Card-Done([string]$dir){ $h=Card-Dialog; $t=[CardN]::Title($h); $b=[CardN]::GetDlgItem($h,2); if($b -eq [IntPtr]::Zero){ $b=[CardN]::GetDlgItem($h,1) }
+  [void][CardN]::PostMessage($b,0x00F5,[IntPtr]::Zero,[IntPtr]::Zero); $f=@(Get-ChildItem $dir -File)
+  "closed '$t'; $($f.Count) card files in ${dir}: $(($f | % Name) -join ', ')" }
 # parse the exported html ('var data' block) into rows: Section, Group, then the columns of that table's header
 function Get-ModbusMap($html){ $t=Get-Content -Raw -Encoding UTF8 $html; $i=$t.IndexOf("var data = '"); $j=$t.IndexOf("';",$i)
   $sec=''; $grp=''; $hdr=$null
@@ -344,13 +377,20 @@ function AppData($cv,$app){ $c=(GF (DC $cv) 'm_RuntimeComponents') | ? { $_.Vari
 # CheckAll of every application inside the project, then the capacity check (button "Check capacity")
 function Check-Project($cv){ foreach($c in (GF (DC $cv) 'm_RuntimeComponents')){ $l=[System.Collections.Generic.List[string]]::new(); $ok=Inv1 $c.ComponentData 'CheckAll' $l; "CHECK|$($c.VariableName)|$ok|"+(($l | ? { $_ }) -join ' ; ') } }
 function Capacity(){ $b=FindCtl $form 'Button' | ? { $_.Name -eq 'buttonCheckSize' } | select -First 1; $b.PerformClick(); "CAPACITY|"+(FindCtl $form 'Label' | ? { $_.Name -eq 'labelUsed' } | select -First 1).Text }
-function Dump-Device($cv){ $d=DC $cv
+function Dump-Device($cv){ $d=DC $cv; Dump-RtuSlave
   foreach($c in (GF $d 'm_RuntimeComponents')){ $s=Sym $cv $c.VariableName; "APP|$($c.VariableName)|$($c.ExecutionOrder)|$(if($s){[int]$s.Location.X})|$(if($s){[int]$s.Location.Y})|$(if($s){[int]$s.Bounds.Height})|in=$(@($s.InputPins).Count)|out=$(@($s.OutputPins).Count)" }
   foreach($s in @(Symbols $cv)){ foreach($p in @($s.InputPins)){ if(-not $p){ continue }; $r=$p.DataObject.ReferenceObject; $src=''; if($r){ $src=$(if($r.ParentDataComponent -and $r.ParentDataComponent.GetType().Name -eq 'CApplicationData'){ "$($r.ParentDataComponent.TypeName).$($r.VariableName)" } else { '#'+$r.VariableName }) }; "DW|$($s.ComponentName).$($p.DataObject.VariableName)|$src|lines=$($p.ConnectedLines.Count)" } }
   foreach($e in (Content $cv).Elements){ if($e.GetType().Name -eq 'EditorPhysicalOutputPin' -and $e.ConnectedLines.Count){ foreach($l in $e.ConnectedLines){ $sp=$l.StartPin; "DW|#$($e.DataObject.VariableName)|$($sp.DataObject.ParentDataComponent.TypeName).$($sp.DataObject.VariableName)|lines=$($e.ConnectedLines.Count)" } } }
   foreach($c in (GF $d 'm_RuntimeComponents')){ foreach($b in (GF $c.ComponentData 'm_RuntimeComponents')){ foreach($o in (GF $b.ComponentData 'm_ObjectList')){ if($o.GetType().Name -eq 'CBacnetSoftpointObject' -and $o.ReferenceGlobal){ $r=$o.ReferenceObject; "GL|$($c.VariableName)|$($b.VariableName).$($o.VariableName)|$($o.ReferenceGlobal)|$(if($r){ "$($r.ParentDataComponent.TypeName).$($r.VariableName)" })|$(if($r){ $r.Global })" } } } }
   foreach($e in (Content $cv).Elements){ if($e.GetType().Name -eq 'EditorPhysicalOutputPin'){ "MAN|$($e.DataObject.VariableName)|$($e.DataObject.ManualControlOn)" } }
   foreach($e in (Content $cv).Elements){ if($e.GetType().Name -match '^EditorPhysical'){ $u=$e.DataObject; $dt=$u.DeviceType; "IO|$($u.VariableName)|$($u.PhysicalType)|$(if($dt){$dt.DeviceType})|$($u.MinPresentValue)|$($u.MaxPresentValue)|$($u.UnitStr)|$(if(HasF $u 'm_Desimals'){GF $u 'm_Desimals'})|$($u.Polarity)|$(if($dt){($dt.GetUIParams() | % { "$($_.Parameter)=$($_.Value)" }) -join ','})|$([int]$e.Location.X)|$([int]$e.Location.Y)|$(ML-En $u.DisplayName)" ; TXL $u } } }
+# Modbus RTU slave port of the device (Ouflex M_BA: COM2, A1/B1): RTUS $cv address baud parity(None|Even|Odd) stopbits
+function RtuSlave(){ Show-Page 5; $dv=(GF (Cfg) 'm_ConfigForms')[6]; $tv=GF $dv 'treeView'; $r=($tv.Nodes | ? { $_.Tag -and $_.Tag.GetType().Name -eq 'CModbusRTUSlaveConfig' } | select -First 1).Tag; Show-Page 0; ,$r }
+function RTUS($cv,[int]$addr,[int]$baud,[string]$parity='None',[int]$stop=1){ try { $s=RtuSlave; if(-not $s){ throw 'device has no Modbus RTU slave port' }; $p=GF $s 'm_RefSerPort'
+  if($s.Address -eq $addr -and (GF $p 'm_BaudRate') -eq $baud -and "$(GF $p 'm_Parity')" -eq $parity -and (GF $p 'm_StopBits') -eq $stop -and $s.Enabled){ $global:BS.skip++; return }
+  $s.Enabled=$true; $s.Address=$addr; SF $p 'm_BaudRate' ([uint32]$baud); SF $p 'm_Parity' ([Enum]::Parse((GF $p 'm_Parity').GetType(),$parity)); SF $p 'm_StopBits' ([Convert]::ChangeType($stop,(GF $p 'm_StopBits').GetType()))
+  $global:BS.add++ } catch { BFail "RTUS" $_ } }
+function Dump-RtuSlave(){ $s=RtuSlave; if($s){ $p=GF $s 'm_RefSerPort'; "RTUS|$($s.Enabled)|$($s.Address)|$(GF $p 'm_BaudRate')|$(GF $p 'm_DataBits')|$(GF $p 'm_Parity')|$(GF $p 'm_StopBits')|$(GF $p 'm_InterfaceName')|$(GF $p 'm_Connectors')" } }
 # Modbus register of a set value / measure (in application $app) or of a physical point ($app ''): MBR $cv app name reg fmt using
 function MBR($cv,$app,$name,$reg,$fmt,[bool]$using){ try { if($app){ $ad=AppData $cv $app; if(-not $ad){ throw "no application $app" }; $o=(GF $ad 'm_ObjectList') | ? { $_.VariableName -eq $name } | select -First 1 } else { $o=DevObj $cv $name }
   if(-not $o){ throw "no object $app/$name" }; $mi=$o.ModbusInterface; if(-not $mi){ throw "no ModbusInterface on $name (export once first)" }
